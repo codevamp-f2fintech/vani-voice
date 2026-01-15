@@ -1,0 +1,7 @@
+{
+  "name": "Vani - Voice AI for Bharat",
+  "description": "A premium SaaS platform for building, testing, and deploying high-quality Voice AI agents tailored for the Indian market.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
