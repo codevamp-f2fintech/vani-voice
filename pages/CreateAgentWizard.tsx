@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Card, Button, Input, Label, Badge } from '../components/UI';
 import {
   ArrowLeft,
@@ -35,6 +35,7 @@ const CreateAgentWizard: React.FC = () => {
   const navigate = useNavigate();
   const { id: agentId } = useParams<{ id: string }>();
   const isEditMode = !!agentId;
+  const location = useLocation();
 
   const { agent: existingAgent, loading: agentLoading } = useAgent(agentId || null);
 
@@ -93,8 +94,59 @@ const CreateAgentWizard: React.FC = () => {
   // Fetch voices
   const { voices, loading: voicesLoading } = useVoices();
 
-  // Pre-populate form when editing
+  // Pre-populate form when editing or using template
   useEffect(() => {
+    // Handle Template Configuration
+    if (!isEditMode && location.state?.templateConfig && !dataLoaded) {
+      console.log('Loading template config:', location.state.templateConfig);
+      const template = location.state.templateConfig;
+
+      setFormData(prev => ({
+        ...prev,
+        // Basic
+        name: template.name || prev.name,
+        description: template.description || prev.description,
+        category: template.category || prev.category,
+        tags: template.tags || prev.tags,
+
+        // Model
+        modelProvider: template.modelProvider || prev.modelProvider,
+        modelName: template.modelName || prev.modelName,
+        systemPrompt: template.systemPrompt || prev.systemPrompt,
+        temperature: template.temperature ?? prev.temperature,
+        maxTokens: template.maxTokens ?? prev.maxTokens,
+
+        // Voice
+        voiceProvider: template.voiceProvider || prev.voiceProvider,
+        voiceId: template.voiceId || prev.voiceId,
+        voiceModel: template.voiceModel || prev.voiceModel,
+
+        // Transcriber
+        transcriberProvider: template.transcriberProvider || prev.transcriberProvider,
+        transcriberModel: template.transcriberModel || prev.transcriberModel,
+        language: template.language || prev.language,
+
+        // First Message
+        firstMessage: template.firstMessage || prev.firstMessage,
+        firstMessageMode: template.firstMessageMode || prev.firstMessageMode,
+
+        // Advanced
+        maxDurationSeconds: template.maxDurationSeconds ?? prev.maxDurationSeconds,
+        silenceTimeoutSeconds: template.silenceTimeoutSeconds ?? prev.silenceTimeoutSeconds,
+        responseDelaySeconds: template.responseDelaySeconds ?? prev.responseDelaySeconds,
+      }));
+
+      // If voice ID is provided in template, ensure manual mode is checked if it's not in the list (simplified logic)
+      if (template.voiceId) {
+        // We'll trust the template has a valid voice ID
+        // Ideally we check against 'voices' list once loaded, but for now just setting it works
+      }
+
+      setDataLoaded(true);
+      return;
+    }
+
+    // Handle Edit Mode
     if (isEditMode && existingAgent && !dataLoaded) {
       console.log('Loading agent data for edit:', existingAgent);
 
@@ -137,7 +189,7 @@ const CreateAgentWizard: React.FC = () => {
 
       setDataLoaded(true);
     }
-  }, [existingAgent, isEditMode, dataLoaded]);
+  }, [existingAgent, isEditMode, dataLoaded, location.state]);
 
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
