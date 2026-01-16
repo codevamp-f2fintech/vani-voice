@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -12,10 +12,15 @@ import {
   X,
   PlusCircle,
   PhoneCall,
-  Upload
+  Upload,
+  Wallet
 } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
 const Sidebar: React.FC<{ isOpen: boolean, setOpen: (o: boolean) => void }> = ({ isOpen, setOpen }) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
     { icon: Users, label: 'Agents', path: '/agents' },
@@ -28,6 +33,22 @@ const Sidebar: React.FC<{ isOpen: boolean, setOpen: (o: boolean) => void }> = ({
     { icon: CreditCard, label: 'Billing & Usage', path: '/pricing' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
+
+  // Get wallet balance - default to 0 if not available
+  const walletBalance = user?.wallet?.balance ?? 0;
+  const subscriptionTier = user?.subscription?.tier ?? 'free';
+
+  // Calculate progress bar (assuming max wallet is 1000 for visual)
+  const progressPercent = Math.min((walletBalance / 1000) * 100, 100);
+
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2
+    }).format(amount);
+  };
 
   return (
     <>
@@ -85,15 +106,27 @@ const Sidebar: React.FC<{ isOpen: boolean, setOpen: (o: boolean) => void }> = ({
 
         <div className="mt-auto border-t border-gray-200 p-6 dark:border-white/10">
           <div className="rounded-[24px] bg-gradient-to-br from-vani-blue/5 to-vani-pink/5 p-5 border-2 border-vani-plum/10">
-            <p className="text-[10px] font-black text-vani-plum uppercase tracking-widest mb-2">Wallet Balance</p>
+            <div className="flex items-center gap-2 mb-2">
+              <Wallet size={14} className="text-vani-plum" />
+              <p className="text-[10px] font-black text-vani-plum uppercase tracking-widest">Wallet Balance</p>
+            </div>
             <div className="flex items-center justify-between mb-3">
-              <span className="text-base font-black dark:text-white">₹450.00</span>
-              <span className="text-xs text-gray-500 font-bold uppercase">Pro</span>
+              <span className="text-base font-black dark:text-white">{formatCurrency(walletBalance)}</span>
+              <span className="text-xs text-gray-500 font-bold uppercase capitalize">{subscriptionTier}</span>
             </div>
             <div className="h-1.5 w-full rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden">
-              <div className="h-full vani-gradient w-[45%]" />
+              <div
+                className="h-full vani-gradient transition-all duration-500"
+                style={{ width: `${progressPercent}%` }}
+              />
             </div>
-            <button className="mt-4 w-full text-center text-xs font-black text-vani-plum hover:text-vani-pink transition-colors uppercase tracking-widest">
+            <button
+              onClick={() => {
+                setOpen(false);
+                navigate('/pricing');
+              }}
+              className="mt-4 w-full text-center text-xs font-black text-vani-plum hover:text-vani-pink transition-colors uppercase tracking-widest"
+            >
               Add Credits
             </button>
           </div>

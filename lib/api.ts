@@ -9,18 +9,31 @@ export class ApiError extends Error {
     }
 }
 
+// Get auth token from localStorage
+function getAuthToken(): string | null {
+    return localStorage.getItem('vani_access_token');
+}
+
 export async function apiFetch<T = any>(
     endpoint: string,
     options?: RequestInit
 ): Promise<T> {
     const url = `${API_BASE_URL}${endpoint}`;
+    const token = getAuthToken();
+
+    const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        ...options?.headers,
+    };
+
+    // Add auth header if token exists
+    if (token) {
+        (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+    }
 
     const res = await fetch(url, {
         ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            ...options?.headers,
-        },
+        headers,
     });
 
     const contentType = res.headers.get('content-type') || '';

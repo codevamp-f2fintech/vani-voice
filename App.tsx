@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import Auth from './pages/Auth';
 import DashboardHome from './pages/DashboardHome';
@@ -18,9 +18,27 @@ import TestAgent from './pages/TestAgent';
 import CallDetails from './pages/CallDetails';
 import Sidebar from './components/Sidebar';
 import { AppTheme } from './types';
-import { Sun, Moon, Bell, Search, ChevronDown, Menu, X } from 'lucide-react';
+import { Sun, Moon, Bell, Search, ChevronDown, Menu, X, LogOut } from 'lucide-react';
+import { AuthProvider, useAuth } from './hooks/useAuth';
+import { ToastProvider } from './components/Toast';
 
+// TopBar with user info from auth context
 const TopBar: React.FC<{ theme: AppTheme, toggleTheme: () => void, isSidebarOpen: boolean, setSidebarOpen: (o: boolean) => void }> = ({ theme, toggleTheme, isSidebarOpen, setSidebarOpen }) => {
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+  };
+
+  // Get user initials
+  const getInitials = (name: string) => {
+    const names = name.split(' ');
+    if (names.length >= 2) {
+      return (names[0][0] + names[names.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
   return (
     <header className="sticky top-0 z-30 flex h-16 w-full items-center justify-between border-b border-gray-200 bg-white/80 px-4 backdrop-blur-md dark:border-white/10 dark:bg-vani-dark/80 lg:px-8">
       <div className="flex items-center gap-4">
@@ -58,18 +76,47 @@ const TopBar: React.FC<{ theme: AppTheme, toggleTheme: () => void, isSidebarOpen
           <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-vani-pink" />
         </button>
 
-        <div className="flex items-center gap-3 pl-2 sm:pl-4 border-l border-gray-200 dark:border-white/10 cursor-pointer group">
+        <div className="flex items-center gap-3 pl-2 sm:pl-4 border-l border-gray-200 dark:border-white/10">
           <div className="text-right hidden sm:block">
-            <p className="text-xs font-bold dark:text-white leading-none">Amit Sharma</p>
-            <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-tighter">Pro Plan</p>
+            <p className="text-xs font-bold dark:text-white leading-none">{user?.name || 'User'}</p>
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-tighter">
+              {user?.subscription?.tier || 'Free'} Plan
+            </p>
           </div>
-          <div className="w-8 h-8 rounded-full bg-vani-plum/20 border border-vani-plum flex items-center justify-center text-vani-plum font-bold text-xs group-hover:scale-105 transition-transform">
-            AS
+          <div className="w-8 h-8 rounded-full bg-vani-plum/20 border border-vani-plum flex items-center justify-center text-vani-plum font-bold text-xs">
+            {user?.name ? getInitials(user.name) : 'U'}
           </div>
+          <button
+            onClick={handleLogout}
+            className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5 transition-colors"
+            title="Logout"
+          >
+            <LogOut size={18} />
+          </button>
         </div>
       </div>
     </header>
   );
+};
+
+// Protected Route wrapper
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-vani-light dark:bg-vani-dark">
+        <div className="animate-spin w-8 h-8 border-4 border-vani-plum border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  return <>{children}</>;
 };
 
 const Layout: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -117,33 +164,46 @@ const Layout: React.FC<{ children: React.ReactElement }> = ({ children }) => {
   );
 };
 
+const AppRoutes: React.FC = () => {
+  return (
+    <Layout>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<LandingPage theme="dark" toggleTheme={() => { }} />} />
+        <Route path="/login" element={<Auth mode="login" />} />
+        <Route path="/signup" element={<Auth mode="signup" />} />
+
+        {/* Protected Routes */}
+        <Route path="/dashboard" element={<ProtectedRoute><DashboardHome /></ProtectedRoute>} />
+        <Route path="/agents" element={<ProtectedRoute><AgentsPage /></ProtectedRoute>} />
+        <Route path="/agents/create" element={<ProtectedRoute><CreateAgentWizard /></ProtectedRoute>} />
+        <Route path="/agents/:id/edit" element={<ProtectedRoute><CreateAgentWizard /></ProtectedRoute>} />
+        <Route path="/agents/:id/test" element={<ProtectedRoute><TestAgent /></ProtectedRoute>} />
+        <Route path="/templates" element={<ProtectedRoute><AgentTemplates /></ProtectedRoute>} />
+        <Route path="/call-logs" element={<ProtectedRoute><LogsRecordings /></ProtectedRoute>} />
+        <Route path="/call-logs/:callId" element={<ProtectedRoute><CallDetails /></ProtectedRoute>} />
+        <Route path="/logs" element={<Navigate to="/call-logs" replace />} />
+        <Route path="/recordings" element={<Navigate to="/call-logs" replace />} />
+        <Route path="/knowledge" element={<ProtectedRoute><KnowledgeBase /></ProtectedRoute>} />
+        <Route path="/pricing" element={<ProtectedRoute><Pricing /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+        <Route path="/test-call" element={<ProtectedRoute><TestCall /></ProtectedRoute>} />
+        <Route path="/bulk-call" element={<ProtectedRoute><BulkCall /></ProtectedRoute>} />
+        <Route path="/phone-numbers" element={<ProtectedRoute><PhoneNumbers /></ProtectedRoute>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Layout>
+  );
+};
+
 const App: React.FC = () => {
   return (
     <Router>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<LandingPage theme="dark" toggleTheme={() => { }} />} />
-          <Route path="/login" element={<Auth mode="login" />} />
-          <Route path="/signup" element={<Auth mode="signup" />} />
-          <Route path="/dashboard" element={<DashboardHome />} />
-          <Route path="/agents" element={<AgentsPage />} />
-          <Route path="/agents/create" element={<CreateAgentWizard />} />
-          <Route path="/agents/:id/edit" element={<CreateAgentWizard />} />
-          <Route path="/agents/:id/test" element={<TestAgent />} />
-          <Route path="/templates" element={<AgentTemplates />} />
-          <Route path="/call-logs" element={<LogsRecordings />} />
-          <Route path="/call-logs/:callId" element={<CallDetails />} />
-          <Route path="/logs" element={<Navigate to="/call-logs" replace />} />
-          <Route path="/recordings" element={<Navigate to="/call-logs" replace />} />
-          <Route path="/knowledge" element={<KnowledgeBase />} />
-          <Route path="/pricing" element={<Pricing />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/test-call" element={<TestCall />} />
-          <Route path="/bulk-call" element={<BulkCall />} />
-          <Route path="/phone-numbers" element={<PhoneNumbers />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </Layout>
+      <AuthProvider>
+        <ToastProvider>
+          <AppRoutes />
+        </ToastProvider>
+      </AuthProvider>
     </Router>
   );
 };
