@@ -28,7 +28,7 @@ export interface Agent {
 
 export interface AgentListResponse {
     success: boolean;
-    data: Agent[];
+    agents: Agent[];  // Changed from 'data' to 'agents' to match backend
     pagination: {
         page: number;
         limit: number;

@@ -66,6 +66,11 @@ const BulkCall: React.FC = () => {
             return;
         }
 
+        if (selectedAgentId === 'default' || !selectedAgentId) {
+            alert('Please select an agent for bulk calls. Independent pipeline requires an agent.');
+            return;
+        }
+
         setStarting(true);
         setResults([]);
         const controller = new AbortController();
@@ -82,12 +87,16 @@ const BulkCall: React.FC = () => {
                 const to = queue[i];
 
                 try {
-                    const res = await fetch(`${API_BASE_URL}/outbound-call`, {
+                    // Use independent call API
+                    const res = await fetch(`${API_BASE_URL}/api/independent-calls/outbound`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        },
                         body: JSON.stringify({
                             to,
-                            agentId: selectedAgentId !== 'default' ? selectedAgentId : undefined
+                            agentId: selectedAgentId
                         }),
                         signal: controller.signal,
                     });
@@ -96,8 +105,8 @@ const BulkCall: React.FC = () => {
                     setResults(prev => [...prev, {
                         to,
                         ok,
-                        id: data?.id,
-                        error: ok ? undefined : data?.message || 'Failed'
+                        id: data?.call?.sid || data?.call?.id,
+                        error: ok ? undefined : data?.error || data?.message || 'Failed'
                     }]);
                 } catch (e: any) {
                     if (controller.signal.aborted) return;
@@ -191,11 +200,18 @@ const BulkCall: React.FC = () => {
                     {/* Agent Selection */}
                     <Card className="p-6 border-2">
                         <div className="space-y-4">
-                            <Label>Select Agent for All Calls</Label>
+                            <div className="flex items-center justify-between">
+                                <Label>Select Agent for All Calls</Label>
+                                <Badge className="bg-vani-plum text-white text-xs">Required</Badge>
+                            </div>
                             {agentsLoading ? (
                                 <div className="flex items-center gap-2 text-gray-500">
                                     <Loader2 size={16} className="animate-spin" />
                                     Loading agents...
+                                </div>
+                            ) : activeAgents.length === 0 ? (
+                                <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl text-yellow-800 dark:text-yellow-400 text-sm">
+                                    No active agents. <button type="button" onClick={() => navigate('/agents/create')} className="underline font-bold">Create one first</button>
                                 </div>
                             ) : (
                                 <select
@@ -203,7 +219,7 @@ const BulkCall: React.FC = () => {
                                     onChange={(e) => setSelectedAgentId(e.target.value)}
                                     className="w-full h-12 px-4 bg-gray-50 dark:bg-white/5 border-2 border-gray-100 dark:border-white/10 rounded-xl text-base dark:text-white outline-none focus:border-vani-plum font-medium"
                                 >
-                                    <option value="default">Default Agent</option>
+                                    <option value="default">-- Select Agent --</option>
                                     {activeAgents.map(agent => (
                                         <option key={agent._id} value={agent._id}>
                                             {agent.name}
@@ -211,6 +227,9 @@ const BulkCall: React.FC = () => {
                                     ))}
                                 </select>
                             )}
+                            <p className="text-xs text-gray-500">
+                                Independent pipeline requires agent selection
+                            </p>
                         </div>
                     </Card>
                 </div>
@@ -267,7 +286,7 @@ const BulkCall: React.FC = () => {
                             <Button
                                 className="w-full h-12 shadow-xl"
                                 onClick={startQueue}
-                                disabled={parsed.valid.length === 0}
+                                disabled={parsed.valid.length === 0 || selectedAgentId === 'default' || !selectedAgentId}
                             >
                                 <Play size={18} className="mr-2" /> Start Calls ({parsed.valid.length})
                             </Button>

@@ -75,6 +75,7 @@ const CreateAgentWizard: React.FC = () => {
     voiceProvider: '11labs',
     voiceId: '',
     voiceModel: 'eleven_turbo_v2_5',
+    voiceSpeed: 0.85, // 0.5-2.0, lower = slower
 
     // Transcriber configuration
     transcriberProvider: 'deepgram',
@@ -120,6 +121,7 @@ const CreateAgentWizard: React.FC = () => {
         voiceProvider: template.voiceProvider || prev.voiceProvider,
         voiceId: template.voiceId || prev.voiceId,
         voiceModel: template.voiceModel || prev.voiceModel,
+        voiceSpeed: template.voiceSpeed ?? prev.voiceSpeed,
 
         // Transcriber
         transcriberProvider: template.transcriberProvider || prev.transcriberProvider,
@@ -171,6 +173,7 @@ const CreateAgentWizard: React.FC = () => {
         voiceProvider: config.voice?.provider || '11labs',
         voiceId: config.voice?.voiceId || '',
         voiceModel: config.voice?.model || 'eleven_turbo_v2_5',
+        voiceSpeed: config.voice?.speed ?? 0.85,
 
         // Transcriber
         transcriberProvider: config.transcriber?.provider || 'deepgram',
@@ -249,6 +252,7 @@ const CreateAgentWizard: React.FC = () => {
           model: formData.voiceModel,
           stability: 0.5,
           similarityBoost: 0.75,
+          speed: formData.voiceSpeed, // Voice speed setting
         } : undefined,
         transcriber: {
           provider: formData.transcriberProvider,
@@ -589,6 +593,25 @@ const CreateAgentWizard: React.FC = () => {
                   onSelect={(voiceId) => handleChange('voiceId', voiceId)}
                 />
               )}
+            </div>
+
+            {/* Voice Speed Control */}
+            <div className="space-y-2">
+              <Label>Voice Speed ({formData.voiceSpeed}x)</Label>
+              <input
+                type="range"
+                min="0.5"
+                max="1.5"
+                step="0.05"
+                value={formData.voiceSpeed}
+                onChange={(e) => handleChange('voiceSpeed', parseFloat(e.target.value))}
+                className="w-full accent-vani-plum"
+              />
+              <div className="flex justify-between text-xs text-gray-500">
+                <span>Slower (0.5x)</span>
+                <span>Normal (1.0x)</span>
+                <span>Faster (1.5x)</span>
+              </div>
             </div>
           </div>
         )}

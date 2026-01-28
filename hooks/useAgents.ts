@@ -16,11 +16,15 @@ export function useAgents(search?: string) {
             const queryString = params.toString();
             const endpoint = `/vapi/agents${queryString ? `?${queryString}` : ''}`;
             const data = await api.get<AgentListResponse>(endpoint);
-            if (data.success) {
-                setAgents(data.data);
+            if (data.success && data.agents) {
+                setAgents(Array.isArray(data.agents) ? data.agents : []);
+            } else {
+                setAgents([]);
             }
         } catch (err: any) {
+            console.error('Error loading agents:', err);
             setError(err.message || 'Failed to load agents');
+            setAgents([]); // Set to empty array on error
         } finally {
             setLoading(false);
         }

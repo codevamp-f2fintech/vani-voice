@@ -4,7 +4,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Card, Button, Input, Label, Badge } from '../components/UI';
 import { Phone, Loader2, PhoneCall, ArrowLeft, ArrowRight, Mic, User } from 'lucide-react';
 import { useAgent } from '../hooks/useAgents';
-import { useOutboundCall, validateE164 } from '../hooks/useOutboundCall';
+import { useIndependentCall } from '../hooks/useIndependentCall';
+import { validateE164 } from '../hooks/useOutboundCall';
 
 const TestAgent: React.FC = () => {
     const navigate = useNavigate();
@@ -14,7 +15,7 @@ const TestAgent: React.FC = () => {
     const [phoneNumber, setPhoneNumber] = useState('+91');
     const [callResult, setCallResult] = useState<any>(null);
 
-    const { makeCall, loading: calling, error } = useOutboundCall();
+    const { makeCall, calling, error } = useIndependentCall();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -26,7 +27,7 @@ const TestAgent: React.FC = () => {
         }
 
         try {
-            const result = await makeCall(cleanPhone, id || 'default');
+            const result = await makeCall(cleanPhone, id || '');
             setCallResult(result);
         } catch (err) {
             // Error is handled by the hook
@@ -130,7 +131,7 @@ const TestAgent: React.FC = () => {
                                 </div>
                                 <div>
                                     <p className="font-bold text-green-800 dark:text-green-200">Call Initiated!</p>
-                                    <p className="text-xs text-green-600 dark:text-green-400">Call ID: {callResult.id}</p>
+                                    <p className="text-xs text-green-600 dark:text-green-400">Call ID: {callResult.sid || callResult.id}</p>
                                 </div>
                             </div>
                             <Button

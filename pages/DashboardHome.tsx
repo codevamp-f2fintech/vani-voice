@@ -79,6 +79,7 @@ const DashboardHome: React.FC = () => {
   ], [stats]);
 
   const recentCalls = useMemo(() => {
+    if (!calls || !Array.isArray(calls)) return [];
     return calls.slice(0, 4).map(call => ({
       id: call._id,
       name: call.agentName || 'Unknown Agent',
@@ -90,6 +91,7 @@ const DashboardHome: React.FC = () => {
   }, [calls]);
 
   const activeAgentsList = useMemo(() => {
+    if (!agents || !Array.isArray(agents)) return [];
     return agents.filter(a => a.status === 'active').slice(0, 3);
   }, [agents]);
 
