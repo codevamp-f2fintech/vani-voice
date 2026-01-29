@@ -22,6 +22,7 @@ export interface Agent {
     statistics: AgentStatistics;
     metadata: AgentMetadata;
     configuration?: any;
+    phoneNumberId?: string;
     createdAt: string;
     updatedAt: string;
 }

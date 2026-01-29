@@ -40,7 +40,7 @@ export function usePhoneNumbers() {
         try {
             setLoading(true);
             setError(null);
-            const data = await api.get<PhoneNumbersResponse>('/vapi/phone-numbers');
+            const data = await api.get<PhoneNumbersResponse>('/api/phone-numbers'); // Changed from /vapi/phone-numbers
             if (data.success) {
                 setPhoneNumbers(data.phoneNumbers);
             }
@@ -88,7 +88,7 @@ export async function importTwilioNumber(data: {
     authToken: string;
     name?: string;
 }) {
-    return api.post('/vapi/phone-numbers/twilio', {
+    return api.post('/api/phone-numbers/twilio', {
         number: data.number,
         twilioAccountSid: data.accountSid,
         twilioAuthToken: data.authToken,
@@ -103,7 +103,7 @@ export async function createVapiSip(data: {
     username?: string;
     password?: string;
 }) {
-    return api.post('/vapi/phone-numbers/vapi-sip', data);
+    return api.post('/api/phone-numbers/vapi-sip', data);
 }
 
 // SIP Trunk creation
@@ -123,7 +123,7 @@ export async function assignAgentToPhoneNumber(phoneNumberId: string, assistantI
 
 // Delete phone number
 export async function deletePhoneNumber(id: string) {
-    return api.delete(`/vapi/phone-numbers/${id}`);
+    return api.delete(`/api/phone-numbers/${id}`);
 }
 
 // Create SIP Trunk credential

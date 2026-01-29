@@ -22,6 +22,7 @@ import {
 import { useVoices } from '../hooks/useVoices';
 import { createAgent, updateAgent, useAgent } from '../hooks/useAgents';
 import { uploadFile } from '../hooks/useFiles';
+import { usePhoneNumbers } from '../hooks/usePhoneNumbers';
 import VoiceSelect from '../components/VoiceSelect';
 
 interface UploadedFile {
@@ -90,10 +91,18 @@ const CreateAgentWizard: React.FC = () => {
     maxDurationSeconds: 600,
     silenceTimeoutSeconds: 30,
     responseDelaySeconds: 0.4,
+
+    // Phone number selection
+    phoneNumberId: '',
   });
 
   // Fetch voices
   const { voices, loading: voicesLoading } = useVoices();
+
+  // Fetch phone numbers
+  const { phoneNumbers } = usePhoneNumbers();
+  console.log('[CreateAgentWizard] phoneNumbers:', phoneNumbers);
+  console.log('[CreateAgentWizard] Twilio numbers:', phoneNumbers?.filter(pn => pn.provider === 'twilio'));
 
   // Pre-populate form when editing or using template
   useEffect(() => {
@@ -188,7 +197,11 @@ const CreateAgentWizard: React.FC = () => {
         maxDurationSeconds: config.maxDurationSeconds ?? 600,
         silenceTimeoutSeconds: config.silenceTimeoutSeconds ?? 30,
         responseDelaySeconds: config.responseDelaySeconds ?? 0.4,
+
+        // Phone number
+        phoneNumberId: existingAgent.phoneNumberId || '',
       }));
+      console.log('[CreateAgentWizard] Loaded phoneNumberId from agent:', existingAgent.phoneNumberId);
 
       setDataLoaded(true);
     }
@@ -276,7 +289,7 @@ const CreateAgentWizard: React.FC = () => {
 
       let result;
       if (isEditMode && agentId) {
-        const updatePayload = {
+        const updatePayload: any = {
           name: formData.name,
           status: formData.status,
           configuration: vapiConfig,
@@ -287,9 +300,18 @@ const CreateAgentWizard: React.FC = () => {
             createdBy: 'vani-dashboard'
           }
         };
+
+        // Add phoneNumberId if selected
+        if (formData.phoneNumberId) {
+          updatePayload.phoneNumberId = formData.phoneNumberId;
+        }
+
+        console.log('[CreateAgentWizard] Updating agent with payload:', updatePayload);
+        console.log('[CreateAgentWizard] phoneNumberId being sent:', formData.phoneNumberId);
+
         result = await updateAgent(agentId, updatePayload);
       } else {
-        const createPayload = {
+        const createPayload: any = {
           ...vapiConfig,
           status: 'active',
           metadata: {
@@ -299,6 +321,14 @@ const CreateAgentWizard: React.FC = () => {
             createdBy: 'vani-dashboard'
           }
         };
+
+        // Add phoneNumberId if selected
+        if (formData.phoneNumberId) {
+          createPayload.phoneNumberId = formData.phoneNumberId;
+        }
+
+        console.log('[CreateAgentWizard] Creating agent with payload:', createPayload);
+
         result = await createAgent(createPayload);
       }
 
@@ -325,6 +355,7 @@ const CreateAgentWizard: React.FC = () => {
     { id: 'model', label: 'Model', icon: MessageSquare },
     { id: 'voice', label: 'Voice', icon: Volume2 },
     { id: 'transcriber', label: 'Transcriber', icon: Mic },
+    { id: 'phone', label: 'Phone Number', icon: Phone },
     { id: 'knowledge', label: 'Knowledge', icon: FileText },
     { id: 'advanced', label: 'Advanced', icon: Zap },
   ];
@@ -799,6 +830,75 @@ const CreateAgentWizard: React.FC = () => {
                 />
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Phone Number Tab */}
+        {activeTab === 'phone' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            <h3 className="text-lg font-bold dark:text-white">Phone Number</h3>
+
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Select which phone number this agent will use for making calls. If not selected, the default .env credentials will be used.
+            </p>
+
+            {phoneNumbers.length === 0 ? (
+              <div className="p-8 border-2 border-dashed border-gray-300 dark:border-white/20 rounded-xl text-center">
+                <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-4">
+                  <Phone size={32} className="text-gray-400" />
+                </div>
+                <h4 className="text-base font-semibold dark:text-white mb-2">No phone numbers available</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Add a Twilio phone number first to use agent-specific credentials.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => window.open('/phone-numbers', '_blank')}
+                >
+                  <Phone size={16} className="mr-2" />
+                  Go to Phone Numbers
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Select Phone Number (Optional)</Label>
+                  <select
+                    value={formData.phoneNumberId}
+                    onChange={(e) => handleChange('phoneNumberId', e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
+                  >
+                    <option value="">Use default from .env</option>
+                    {phoneNumbers
+                      .filter(pn => pn.provider === 'twilio')
+                      .map(pn => (
+                        <option key={pn.id} value={pn.id}>
+                          {pn.name} - {pn.number}
+                        </option>
+                      ))}
+                  </select>
+                  <p className="text-xs text-gray-500">
+                    Only Twilio numbers can be used for independent calls. VAPI SIP numbers are not shown.
+                  </p>
+                </div>
+
+                {formData.phoneNumberId && (
+                  <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 size={20} className="text-green-600 dark:text-green-400 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                          Phone Number Selected
+                        </p>
+                        <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                          This agent will use the selected phone number's Twilio credentials for all outbound calls.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </Card>

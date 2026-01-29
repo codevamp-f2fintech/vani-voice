@@ -24,7 +24,7 @@ import {
 } from '../hooks/usePhoneNumbers';
 import { useAgents } from '../hooks/useAgents';
 
-type TabType = 'twilio' | 'vapi-sip' | 'sip-trunk';
+type TabType = 'twilio' | 'did-number';
 
 const PhoneNumbers: React.FC = () => {
     const { phoneNumbers, loading, refetch } = usePhoneNumbers();
@@ -39,14 +39,8 @@ const PhoneNumbers: React.FC = () => {
     const [twilioForm, setTwilioForm] = useState({
         number: '', accountSid: '', authToken: '', name: ''
     });
-    const [vapiSipForm, setVapiSipForm] = useState({
-        sipIdentifier: '', name: '', username: '', password: ''
-    });
-    const [sipTrunkForm, setSipTrunkForm] = useState({
-        number: '', credentialId: '', name: '', allowNonE164: false
-    });
-    const [credentialForm, setCredentialForm] = useState({
-        name: '', gatewayIp: '', authUsername: '', authPassword: ''
+    const [didNumberForm, setDidNumberForm] = useState({
+        number: '', name: '', username: '', password: '', serverIp: ''
     });
 
     const handleImportTwilio = async () => {
@@ -67,58 +61,24 @@ const PhoneNumbers: React.FC = () => {
         }
     };
 
-    const handleCreateVapiSip = async () => {
-        if (!vapiSipForm.sipIdentifier) {
-            alert('SIP Identifier is required');
+    const handleCreateDidNumber = async () => {
+        if (!didNumberForm.number) {
+            alert('DID Number is required');
             return;
         }
         setSubmitting(true);
         try {
-            await createVapiSip(vapiSipForm);
-            setVapiSipForm({ sipIdentifier: '', name: '', username: '', password: '' });
-            setDialogOpen(false);
-            refetch();
-        } catch (err: any) {
-            alert(err.message || 'Failed to create Vapi SIP');
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    const handleCreateSipTrunk = async () => {
-        if (!sipTrunkForm.number || !sipTrunkForm.credentialId) {
-            alert('Number and Credential are required');
-            return;
-        }
-        setSubmitting(true);
-        try {
-            await createSipTrunk({
-                ...sipTrunkForm,
-                numberE164CheckEnabled: !sipTrunkForm.allowNonE164
+            await createVapiSip({
+                sipIdentifier: didNumberForm.number,
+                name: didNumberForm.name || `DID ${didNumberForm.number}`,
+                username: didNumberForm.username,
+                password: didNumberForm.password
             });
-            setSipTrunkForm({ number: '', credentialId: '', name: '', allowNonE164: false });
+            setDidNumberForm({ number: '', name: '', username: '', password: '', serverIp: '' });
             setDialogOpen(false);
             refetch();
         } catch (err: any) {
-            alert(err.message || 'Failed to create SIP Trunk number');
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    const handleCreateCredential = async () => {
-        if (!credentialForm.name || !credentialForm.gatewayIp) {
-            alert('Name and Gateway IP are required');
-            return;
-        }
-        setSubmitting(true);
-        try {
-            await createSipTrunkCredential(credentialForm);
-            setCredentialForm({ name: '', gatewayIp: '', authUsername: '', authPassword: '' });
-            // Refresh credentials by reloading whole page data
-            window.location.reload();
-        } catch (err: any) {
-            alert(err.message || 'Failed to create credential');
+            alert(err.message || 'Failed to create DID number');
         } finally {
             setSubmitting(false);
         }
@@ -250,21 +210,14 @@ const PhoneNumbers: React.FC = () => {
                                 size="sm"
                                 onClick={() => setActiveTab('twilio')}
                             >
-                                Import Twilio
+                                Twilio Number
                             </Button>
                             <Button
-                                variant={activeTab === 'vapi-sip' ? 'default' : 'outline'}
+                                variant={activeTab === 'did-number' ? 'default' : 'outline'}
                                 size="sm"
-                                onClick={() => setActiveTab('vapi-sip')}
+                                onClick={() => setActiveTab('did-number')}
                             >
-                                Free Vapi SIP
-                            </Button>
-                            <Button
-                                variant={activeTab === 'sip-trunk' ? 'default' : 'outline'}
-                                size="sm"
-                                onClick={() => setActiveTab('sip-trunk')}
-                            >
-                                BYO SIP Trunk
+                                DID Number
                             </Button>
                         </div>
 
@@ -311,138 +264,62 @@ const PhoneNumbers: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* Vapi SIP Form */}
-                            {activeTab === 'vapi-sip' && (
+                            {/* DID Number Form */}
+                            {activeTab === 'did-number' && (
                                 <div className="space-y-4">
                                     <div>
-                                        <Label>SIP Identifier *</Label>
+                                        <Label>DID Number *</Label>
                                         <Input
-                                            value={vapiSipForm.sipIdentifier}
-                                            onChange={(e) => setVapiSipForm(f => ({ ...f, sipIdentifier: e.target.value }))}
-                                            placeholder="my-example-identifier"
+                                            value={didNumberForm.number}
+                                            onChange={(e) => setDidNumberForm(f => ({ ...f, number: e.target.value }))}
+                                            placeholder="+14155551234 or custom identifier"
                                         />
                                         <p className="text-xs text-gray-500 mt-1">
-                                            Will be used as: sip:{vapiSipForm.sipIdentifier || 'identifier'}@sip.vapi.ai
+                                            Enter your DID number or any unique identifier
                                         </p>
                                     </div>
                                     <div>
                                         <Label>Label (Optional)</Label>
                                         <Input
-                                            value={vapiSipForm.name}
-                                            onChange={(e) => setVapiSipForm(f => ({ ...f, name: e.target.value }))}
-                                            placeholder="Label for SIP URI"
+                                            value={didNumberForm.name}
+                                            onChange={(e) => setDidNumberForm(f => ({ ...f, name: e.target.value }))}
+                                            placeholder="My DID Number"
                                         />
                                     </div>
                                     <div className="border-t pt-4 dark:border-white/10">
-                                        <p className="text-sm font-medium mb-3 dark:text-white">SIP Authentication (Optional)</p>
-                                        <div className="grid grid-cols-2 gap-4">
+                                        <p className="text-sm font-medium mb-3 dark:text-white">SIP Credentials (Optional)</p>
+                                        <div className="space-y-3">
                                             <div>
-                                                <Label>Username</Label>
+                                                <Label>Server IP / Domain</Label>
                                                 <Input
-                                                    value={vapiSipForm.username}
-                                                    onChange={(e) => setVapiSipForm(f => ({ ...f, username: e.target.value }))}
-                                                    placeholder="SIP Username"
+                                                    value={didNumberForm.serverIp}
+                                                    onChange={(e) => setDidNumberForm(f => ({ ...f, serverIp: e.target.value }))}
+                                                    placeholder="sip.provider.com"
                                                 />
                                             </div>
-                                            <div>
-                                                <Label>Password</Label>
-                                                <Input
-                                                    type="password"
-                                                    value={vapiSipForm.password}
-                                                    onChange={(e) => setVapiSipForm(f => ({ ...f, password: e.target.value }))}
-                                                    placeholder="SIP Password"
-                                                />
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <Label>Username</Label>
+                                                    <Input
+                                                        value={didNumberForm.username}
+                                                        onChange={(e) => setDidNumberForm(f => ({ ...f, username: e.target.value }))}
+                                                        placeholder="SIP Username"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <Label>Password</Label>
+                                                    <Input
+                                                        type="password"
+                                                        value={didNumberForm.password}
+                                                        onChange={(e) => setDidNumberForm(f => ({ ...f, password: e.target.value }))}
+                                                        placeholder="SIP Password"
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                    <Button onClick={handleCreateVapiSip} disabled={submitting} className="w-full h-12">
-                                        {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating...</> : 'Create Vapi SIP'}
-                                    </Button>
-                                </div>
-                            )}
-
-                            {/* SIP Trunk Form */}
-                            {activeTab === 'sip-trunk' && (
-                                <div className="space-y-4">
-                                    <div>
-                                        <Label>Phone Number *</Label>
-                                        <Input
-                                            value={sipTrunkForm.number}
-                                            onChange={(e) => setSipTrunkForm(f => ({ ...f, number: e.target.value }))}
-                                            placeholder="+14155551234"
-                                        />
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            type="checkbox"
-                                            id="allowNonE164"
-                                            checked={sipTrunkForm.allowNonE164}
-                                            onChange={(e) => setSipTrunkForm(f => ({ ...f, allowNonE164: e.target.checked }))}
-                                            className="accent-vani-plum"
-                                        />
-                                        <label htmlFor="allowNonE164" className="text-sm dark:text-gray-300">
-                                            Allow non-E164 phone numbers
-                                        </label>
-                                    </div>
-                                    <div>
-                                        <Label>SIP Trunk Credential *</Label>
-                                        <select
-                                            value={sipTrunkForm.credentialId}
-                                            onChange={(e) => setSipTrunkForm(f => ({ ...f, credentialId: e.target.value }))}
-                                            className="w-full h-12 px-4 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm dark:text-white outline-none"
-                                        >
-                                            <option value="">Select a SIP trunk credential</option>
-                                            {credentials.map(c => (
-                                                <option key={c.id} value={c.id}>{c.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <Label>Label (Optional)</Label>
-                                        <Input
-                                            value={sipTrunkForm.name}
-                                            onChange={(e) => setSipTrunkForm(f => ({ ...f, name: e.target.value }))}
-                                            placeholder="Label for Phone Number"
-                                        />
-                                    </div>
-
-                                    {/* Create Credential Section */}
-                                    <div className="border-t pt-4 dark:border-white/10">
-                                        <p className="text-sm font-medium mb-3 dark:text-white">Need a SIP Trunk Credential?</p>
-                                        <div className="space-y-3 bg-gray-50 dark:bg-white/5 p-4 rounded-xl">
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <Input
-                                                    placeholder="Credential Name"
-                                                    value={credentialForm.name}
-                                                    onChange={(e) => setCredentialForm(f => ({ ...f, name: e.target.value }))}
-                                                />
-                                                <Input
-                                                    placeholder="Gateway IP (sip.provider.com)"
-                                                    value={credentialForm.gatewayIp}
-                                                    onChange={(e) => setCredentialForm(f => ({ ...f, gatewayIp: e.target.value }))}
-                                                />
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <Input
-                                                    placeholder="Auth Username (optional)"
-                                                    value={credentialForm.authUsername}
-                                                    onChange={(e) => setCredentialForm(f => ({ ...f, authUsername: e.target.value }))}
-                                                />
-                                                <Input
-                                                    type="password"
-                                                    placeholder="Auth Password (optional)"
-                                                    value={credentialForm.authPassword}
-                                                    onChange={(e) => setCredentialForm(f => ({ ...f, authPassword: e.target.value }))}
-                                                />
-                                            </div>
-                                            <Button onClick={handleCreateCredential} disabled={submitting} variant="outline" size="sm">
-                                                Create Credential
-                                            </Button>
-                                        </div>
-                                    </div>
-
-                                    <Button onClick={handleCreateSipTrunk} disabled={submitting} className="w-full h-12">
-                                        {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating...</> : 'Create SIP Trunk Number'}
+                                    <Button onClick={handleCreateDidNumber} disabled={submitting} className="w-full h-12">
+                                        {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating...</> : 'Create DID Number'}
                                     </Button>
                                 </div>
                             )}
