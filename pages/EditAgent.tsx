@@ -38,6 +38,7 @@ const EditAgent: React.FC = () => {
     const [voiceSpeed, setVoiceSpeed] = useState(1.0);
     const [firstMessage, setFirstMessage] = useState('');
     const [systemPrompt, setSystemPrompt] = useState('');
+    const [silenceTimeout, setSilenceTimeout] = useState(30);
     const [status, setStatus] = useState<'active' | 'inactive' | 'draft'>('active');
 
     // Pre-populate form when agent data loads
@@ -48,13 +49,21 @@ const EditAgent: React.FC = () => {
             setStatus(agent.status || 'active');
 
             // Load configuration if available
-            if (agent.configuration) {
-                const config = agent.configuration;
+            // Handle both old (double-nested) and new (single-level) structure
+            const config = agent.configuration?.configuration || agent.configuration;
+
+            if (config) {
                 setSelectedVoiceId(config.voice?.voiceId || '');
                 setLlmModel(config.model?.model || 'gpt-4o');
                 setTemperature(config.model?.temperature ?? 0.7);
                 setFirstMessage(config.firstMessage || '');
-                setSystemPrompt(config.model?.systemPrompt || '');
+                // Extract system prompt from messages array or use systemPrompt directly
+                setSystemPrompt(
+                    config.model?.messages?.[0]?.content ||
+                    config.model?.systemPrompt ||
+                    ''
+                );
+                setSilenceTimeout(config.silenceTimeoutSeconds ?? 30);
             }
 
             // Extract language from tags
@@ -93,20 +102,40 @@ const EditAgent: React.FC = () => {
         try {
             setSaving(true);
 
+            // Build configuration object matching CreateAgentWizard format
             const updates = {
                 name: agentName,
                 status,
-                voice: selectedVoiceId ? {
-                    voiceId: selectedVoiceId,
-                    provider: voices.find(v => v.voiceId === selectedVoiceId)?.provider || 'deepgram'
-                } : undefined,
-                model: {
-                    provider: 'openai',
-                    model: llmModel,
-                    temperature,
-                    systemPrompt
+                configuration: {
+                    // Voice configuration
+                    voice: selectedVoiceId ? {
+                        provider: voices.find(v => v.voiceId === selectedVoiceId)?.provider || '11labs',
+                        voiceId: selectedVoiceId,
+                        model: 'eleven_multilingual_v2',
+                        stability: 0.5,
+                        similarityBoost: 0.75
+                    } : undefined,
+                    // Model configuration
+                    model: {
+                        provider: 'openai',
+                        model: llmModel,
+                        temperature,
+                        messages: [{ role: 'system', content: systemPrompt }]
+                    },
+                    // Transcriber configuration
+                    transcriber: {
+                        provider: 'deepgram',
+                        model: 'nova-2',
+                        language: language.toLowerCase()
+                    },
+                    // First message
+                    firstMessage,
+                    firstMessageMode: 'assistant-speaks-first',
+                    // Advanced settings
+                    maxDurationSeconds: 600,
+                    silenceTimeoutSeconds: silenceTimeout,
+                    responseDelaySeconds: 0.4
                 },
-                firstMessage,
                 metadata: {
                     description: goal,
                     category: 'general',
@@ -300,6 +329,25 @@ const EditAgent: React.FC = () => {
                                 <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
                                     <span>Slow</span>
                                     <span>Fast</span>
+                                </div>
+                            </div>
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <div className="flex items-center gap-2">
+                                        <Label className="mb-0">Silence Timeout</Label>
+                                        <Info size={14} className="text-gray-400" title="Starts when agent stops speaking" />
+                                    </div>
+                                    <span className="text-lg text-vani-plum font-black">{silenceTimeout}s</span>
+                                </div>
+                                <input
+                                    type="range" min="10" max="60" step="5"
+                                    value={silenceTimeout}
+                                    onChange={(e) => setSilenceTimeout(parseInt(e.target.value))}
+                                    className="w-full h-2 bg-gray-200 dark:bg-white/10 rounded-full appearance-none accent-vani-plum cursor-pointer"
+                                />
+                                <div className="flex justify-between text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                                    <span>10s</span>
+                                    <span>60s</span>
                                 </div>
                             </div>
                         </div>
