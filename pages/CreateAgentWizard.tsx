@@ -74,7 +74,8 @@ const CreateAgentWizard: React.FC = () => {
     // Voice configuration
     voiceProvider: '11labs',
     voiceId: '',
-    voiceModel: 'eleven_turbo_v2_5',
+    voiceModel: 'eleven_multilingual_v2',
+    hinglish: false,
 
     // Transcriber configuration
     transcriberProvider: 'deepgram',
@@ -170,7 +171,8 @@ const CreateAgentWizard: React.FC = () => {
         // Voice
         voiceProvider: config.voice?.provider || '11labs',
         voiceId: config.voice?.voiceId || '',
-        voiceModel: config.voice?.model || 'eleven_turbo_v2_5',
+        voiceModel: config.voice?.model || 'eleven_multilingual_v2',
+        hinglish: config.voice?.hinglish || false,
 
         // Transcriber
         transcriberProvider: config.transcriber?.provider || 'deepgram',
@@ -222,6 +224,11 @@ const CreateAgentWizard: React.FC = () => {
     setUploadedFiles(prev => prev.filter(f => f.id !== fileId));
   };
 
+  // Helper to detect v3 models
+  const isV3Model = (model: string) => {
+    return model === 'eleven_v3' || model === 'eleven_flash_v2_5';
+  };
+
   const handleSubmit = async () => {
     if (!formData.name.trim()) {
       alert('Please enter an agent name');
@@ -247,8 +254,11 @@ const CreateAgentWizard: React.FC = () => {
           provider: formData.voiceProvider,
           voiceId: finalVoiceId,
           model: formData.voiceModel,
-          stability: 0.5,
-          similarityBoost: 0.75,
+          // Only include voice settings for non-v3 models (v3 doesn't support these)
+          ...(isV3Model(formData.voiceModel) ? {} : {
+            stability: 0.5,
+            similarityBoost: 0.75,
+          }),
         } : undefined,
         transcriber: {
           provider: formData.transcriberProvider,
@@ -396,7 +406,7 @@ const CreateAgentWizard: React.FC = () => {
                 <select
                   value={formData.category}
                   onChange={(e) => handleChange('category', e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
                 >
                   <option value="customer-support">Customer Support</option>
                   <option value="sales">Sales</option>
@@ -422,7 +432,7 @@ const CreateAgentWizard: React.FC = () => {
                 <select
                   value={formData.status}
                   onChange={(e) => handleChange('status', e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
                 >
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
@@ -444,7 +454,7 @@ const CreateAgentWizard: React.FC = () => {
                 <select
                   value={formData.modelProvider}
                   onChange={(e) => handleChange('modelProvider', e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
                 >
                   <option value="openai">OpenAI</option>
                   <option value="anthropic">Anthropic</option>
@@ -524,7 +534,7 @@ const CreateAgentWizard: React.FC = () => {
                 <select
                   value={formData.voiceProvider}
                   onChange={(e) => handleChange('voiceProvider', e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
                 >
                   <option value="11labs">ElevenLabs</option>
                   <option value="azure">Azure</option>
@@ -537,14 +547,49 @@ const CreateAgentWizard: React.FC = () => {
                 <select
                   value={formData.voiceModel}
                   onChange={(e) => handleChange('voiceModel', e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
                 >
-                  <option value="eleven_turbo_v2_5">eleven_turbo_v2_5</option>
-                  <option value="eleven_turbo_v2">eleven_turbo_v2</option>
-                  <option value="eleven_multilingual_v2">eleven_multilingual_v2</option>
-                  <option value="eleven_monolingual_v1">eleven_monolingual_v1</option>
+                  <option value="eleven_turbo_v2_5">Eleven Turbo v2.5 (Fast)</option>
+                  <option value="eleven_turbo_v2">Eleven Turbo v2</option>
+                  <option value="eleven_multilingual_v2">Eleven Multilingual v2 (Recommended for Hindi)</option>
+                  <option value="eleven_monolingual_v1">Eleven Monolingual v1</option>
+                  <option value="eleven_flash_v2_5">Eleven Flash v2.5 (Lowest Latency)</option>
+                  <option value="eleven_flash_v2">Eleven Flash v2</option>
+                  <option value="eleven_v3">Eleven V3 (Best for Hindi/Hinglish)</option>
                 </select>
               </div>
+            </div>
+
+            {/* V3 Model Info */}
+            {isV3Model(formData.voiceModel) && (
+              <div className="flex items-center gap-2 text-blue-600 text-sm bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-3 rounded-xl">
+                <AlertCircle size={16} />
+                V3 models use optimized settings automatically. Voice stability and similarity parameters are not configurable.
+              </div>
+            )}
+
+            {/* Hinglish Mode Toggle */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Hinglish Mode (Hindi + English)</Label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.hinglish}
+                    onChange={(e) => handleChange('hinglish', e.target.checked)}
+                    className="w-4 h-4 accent-vani-plum rounded"
+                  />
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Enable Hinglish
+                  </span>
+                </label>
+              </div>
+              {formData.hinglish && (
+                <div className="flex items-center gap-2 text-blue-600 text-sm bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-3 rounded-xl">
+                  <AlertCircle size={16} />
+                  Hinglish mode enabled. Make sure to set transcriber language to Hindi (hi) for best results.
+                </div>
+              )}
             </div>
 
             {/* Voice Selection */}
@@ -603,7 +648,7 @@ const CreateAgentWizard: React.FC = () => {
               <select
                 value={formData.transcriberProvider}
                 onChange={(e) => handleChange('transcriberProvider', e.target.value)}
-                className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
+                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
               >
                 <option value="deepgram">Deepgram</option>
                 <option value="assembly-ai">AssemblyAI</option>
@@ -626,7 +671,7 @@ const CreateAgentWizard: React.FC = () => {
                 <select
                   value={formData.language}
                   onChange={(e) => handleChange('language', e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
+                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
                 >
                   <option value="hi">Hindi</option>
                   <option value="en">English</option>
