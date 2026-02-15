@@ -1,10 +1,17 @@
+// Enhanced Test Call Page - Uses Independent Voice Pipeline
+// No VAPI dependency!
 
 import React, { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, Button, Input, Label, Badge } from '../components/UI';
-import { Phone, Users, Loader2, PhoneCall, ArrowRight } from 'lucide-react';
+import { Phone, Users, Loader2, PhoneCall, ArrowRight, Zap } from 'lucide-react';
 import { useAgents } from '../hooks/useAgents';
-import { useOutboundCall, validateE164 } from '../hooks/useOutboundCall';
+import { useIndependentCall } from '../hooks/useIndependentCall';
+
+// E.164 phone number validation
+function validateE164(phone: string): boolean {
+    return /^\+[1-9]\d{1,14}$/.test(phone);
+}
 
 const TestCall: React.FC = () => {
     const navigate = useNavigate();
@@ -12,11 +19,11 @@ const TestCall: React.FC = () => {
     const preselectedAgentId = searchParams.get('agentId');
 
     const [phoneNumber, setPhoneNumber] = useState('+91');
-    const [selectedAgentId, setSelectedAgentId] = useState(preselectedAgentId || 'default');
+    const [selectedAgentId, setSelectedAgentId] = useState(preselectedAgentId || '');
     const [callResult, setCallResult] = useState<any>(null);
 
     const { agents, loading: agentsLoading } = useAgents();
-    const { makeCall, loading: calling, error } = useOutboundCall();
+    const { makeCall, calling, error } = useIndependentCall();
 
     const activeAgents = agents.filter(a => a.status === 'active');
 
@@ -29,23 +36,37 @@ const TestCall: React.FC = () => {
             return;
         }
 
+        if (!selectedAgentId) {
+            alert('Please select an agent');
+            return;
+        }
+
         try {
             const result = await makeCall(cleanPhone, selectedAgentId);
             setCallResult(result);
-        } catch (err) {
-            // Error is handled by the hook
+        } catch (err: any) {
+            // Error handled by hook
+            console.error('Call error:', err);
         }
     };
 
     return (
         <div className="max-w-2xl mx-auto space-y-8">
+            {/* Header */}
             <div>
-                <h1 className="text-4xl font-black dark:text-white tracking-tight">Test Call</h1>
+                <div className="flex items-center gap-3 mb-2">
+                    <h1 className="text-4xl font-black dark:text-white tracking-tight">Test Call</h1>
+                    <Badge className="bg-gradient-to-r from-vani-plum to-vani-pink text-white px-3 py-1 text-xs font-bold">
+                        <Zap size={12} className="mr-1" />
+                        Independent
+                    </Badge>
+                </div>
                 <p className="text-gray-500 dark:text-gray-400 font-medium mt-1">
-                    Make a single outbound call to test your Voice AI agent.
+                    Make a single outbound call using your independent voice AI pipeline (no VAPI!)
                 </p>
             </div>
 
+            {/* Main Form */}
             <Card className="p-8 border-2">
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Phone Number */}
@@ -60,6 +81,7 @@ const TestCall: React.FC = () => {
                             value={phoneNumber}
                             onChange={(e) => setPhoneNumber(e.target.value)}
                             className="h-14 text-lg font-medium"
+                            required
                         />
                         <p className="text-xs text-gray-500">
                             Use E.164 format. Example: +918267818161
@@ -77,13 +99,18 @@ const TestCall: React.FC = () => {
                                 <Loader2 size={16} className="animate-spin" />
                                 Loading agents...
                             </div>
+                        ) : activeAgents.length === 0 ? (
+                            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl text-yellow-800 dark:text-yellow-400 text-sm">
+                                No active agents found. <button type="button" onClick={() => navigate('/agents/create')} className="underline font-bold">Create one first</button>
+                            </div>
                         ) : (
                             <select
                                 value={selectedAgentId}
                                 onChange={(e) => setSelectedAgentId(e.target.value)}
                                 className="w-full h-14 px-4 bg-gray-50 dark:bg-white/5 border-2 border-gray-100 dark:border-white/10 rounded-xl text-base dark:text-white outline-none focus:border-vani-plum font-medium"
+                                required
                             >
-                                <option value="default">Default Agent</option>
+                                <option value="">-- Select Agent --</option>
                                 {activeAgents.map(agent => (
                                     <option key={agent._id} value={agent._id}>
                                         {agent.name}
@@ -92,7 +119,7 @@ const TestCall: React.FC = () => {
                             </select>
                         )}
                         <p className="text-xs text-gray-500">
-                            Select a custom agent or use the default one.
+                            Select which AI agent will handle this call
                         </p>
                     </div>
 
@@ -112,7 +139,12 @@ const TestCall: React.FC = () => {
                                 </div>
                                 <div>
                                     <p className="font-bold text-green-800 dark:text-green-200">Call Initiated!</p>
-                                    <p className="text-xs text-green-600 dark:text-green-400">Call ID: {callResult.id}</p>
+                                    <p className="text-xs text-green-600 dark:text-green-400">
+                                        Call ID: {callResult.sid || callResult.id}
+                                    </p>
+                                    <p className="text-xs text-green-600 dark:text-green-400">
+                                        Agent: {callResult.agentName}
+                                    </p>
                                 </div>
                             </div>
                             <Button
@@ -131,7 +163,7 @@ const TestCall: React.FC = () => {
                         <Button
                             type="submit"
                             className="flex-1 h-14 text-lg shadow-xl"
-                            disabled={calling}
+                            disabled={calling || !selectedAgentId}
                         >
                             {calling ? (
                                 <>
@@ -168,12 +200,28 @@ const TestCall: React.FC = () => {
                 </Card>
                 <Card
                     className="p-6 border-2 cursor-pointer hover:border-vani-plum/50 transition-all group"
-                    onClick={() => navigate('/agents')}
+                    onClick={() => navigate('/agents/create')}
                 >
-                    <h3 className="font-bold dark:text-white mb-1 group-hover:text-vani-plum">Manage Agents</h3>
-                    <p className="text-sm text-gray-500">Create or edit your AI agents</p>
+                    <h3 className="font-bold dark:text-white mb-1 group-hover:text-vani-plum">Create Agent</h3>
+                    <p className="text-sm text-gray-500">Build a new AI voice agent</p>
                 </Card>
             </div>
+
+            {/* Info Card */}
+            <Card className="p-6 bg-gradient-to-r from-vani-plum/10 to-vani-pink/10 border-2 border-vani-plum/20">
+                <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full bg-vani-plum/20 flex items-center justify-center flex-shrink-0">
+                        <Zap size={20} className="text-vani-plum" />
+                    </div>
+                    <div>
+                        <h3 className="font-bold dark:text-white mb-1">Independent Voice Pipeline</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-300">
+                            This uses your own voice AI infrastructure with Deepgram (STT), Gemini AI (LLM),
+                            and ElevenLabs (TTS) - no VAPI dependency! Enjoy 77% cost savings and complete control.
+                        </p>
+                    </div>
+                </div>
+            </Card>
         </div>
     );
 };

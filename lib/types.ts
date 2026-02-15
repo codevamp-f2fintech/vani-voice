@@ -22,13 +22,14 @@ export interface Agent {
     statistics: AgentStatistics;
     metadata: AgentMetadata;
     configuration?: any;
+    phoneNumberId?: string;
     createdAt: string;
     updatedAt: string;
 }
 
 export interface AgentListResponse {
     success: boolean;
-    data: Agent[];
+    agents: Agent[];  // Changed from 'data' to 'agents' to match backend
     pagination: {
         page: number;
         limit: number;
@@ -80,6 +81,7 @@ export interface Voice {
     voiceId: string;
     name: string;
     provider: string;
+    category?: string; // 'cloned', 'premade', 'generated', 'professional'
     previewUrl?: string;
     description?: string;
     accent?: string;

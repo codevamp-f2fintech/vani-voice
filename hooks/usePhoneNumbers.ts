@@ -5,11 +5,14 @@ export interface PhoneNumber {
     id: string;
     number: string;
     name: string;
-    provider: string;
+    provider: 'twilio' | 'sip-trunk';
     status: string;
     assistantId: string | null;
     sipUri?: string;
-    credentialId?: string;
+    sipServerIp?: string;
+    sipPort?: number;
+    hasTwilioCredentials?: boolean;
+    hasSipCredentials?: boolean;
     createdAt: string;
 }
 
@@ -40,7 +43,7 @@ export function usePhoneNumbers() {
         try {
             setLoading(true);
             setError(null);
-            const data = await api.get<PhoneNumbersResponse>('/vapi/phone-numbers');
+            const data = await api.get<PhoneNumbersResponse>('/api/phone-numbers'); // Changed from /vapi/phone-numbers
             if (data.success) {
                 setPhoneNumbers(data.phoneNumbers);
             }
@@ -88,7 +91,7 @@ export async function importTwilioNumber(data: {
     authToken: string;
     name?: string;
 }) {
-    return api.post('/vapi/phone-numbers/twilio', {
+    return api.post('/api/phone-numbers/twilio', {
         number: data.number,
         twilioAccountSid: data.accountSid,
         twilioAuthToken: data.authToken,
@@ -96,24 +99,16 @@ export async function importTwilioNumber(data: {
     });
 }
 
-// Vapi SIP creation
-export async function createVapiSip(data: {
-    sipIdentifier: string;
-    name?: string;
-    username?: string;
-    password?: string;
-}) {
-    return api.post('/vapi/phone-numbers/vapi-sip', data);
-}
-
-// SIP Trunk creation
+// SIP Trunk creation (for SIP trunking with your own provider)
 export async function createSipTrunk(data: {
     number: string;
-    credentialId: string;
     name?: string;
-    numberE164CheckEnabled?: boolean;
+    serverIp: string;
+    username: string;
+    password: string;
+    port?: number;
 }) {
-    return api.post('/vapi/phone-numbers/sip-trunk', data);
+    return api.post('/api/phone-numbers/sip-trunk', data);
 }
 
 // Assign agent to phone number
@@ -123,7 +118,7 @@ export async function assignAgentToPhoneNumber(phoneNumberId: string, assistantI
 
 // Delete phone number
 export async function deletePhoneNumber(id: string) {
-    return api.delete(`/vapi/phone-numbers/${id}`);
+    return api.delete(`/api/phone-numbers/${id}`);
 }
 
 // Create SIP Trunk credential

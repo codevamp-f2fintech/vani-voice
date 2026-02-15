@@ -34,6 +34,12 @@ const CallDetails: React.FC = () => {
             setLoading(true);
             setError(null);
             const response = await api.get<any>(`/outbound-call-info/${callId}`);
+
+            // If this is an independent call with a recording, use proxy URL
+            if (response.phoneCallProvider === 'twilio' && response.recordingUrl) {
+                response.recordingUrl = `/api/independent-calls/${callId}/recording`;
+            }
+
             setCall(response);
         } catch (err: any) {
             setError(err.message || 'Failed to load call details');
@@ -76,7 +82,22 @@ const CallDetails: React.FC = () => {
     const parseTranscript = (transcript?: string) => {
         if (!transcript) return [];
 
-        // Try to parse as structured transcript
+        // Try to parse as JSON array first (format from independent calls)
+        try {
+            const parsed = JSON.parse(transcript);
+            if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].role) {
+                // Convert {role, content, timestamp} format to {speaker, text} format
+                return parsed.map(msg => ({
+                    speaker: msg.role === 'user' ? 'user' : 'ai',
+                    text: msg.content,
+                    timestamp: msg.timestamp
+                }));
+            }
+        } catch (e) {
+            // Not JSON, fall through to line-by-line parsing
+        }
+
+        // Fallback: parse as line-by-line text format (VAPI format)
         const lines = transcript.split('\n').filter(l => l.trim());
         return lines.map(line => {
             const isUser = line.toLowerCase().startsWith('user:') || line.toLowerCase().startsWith('customer:');
@@ -257,8 +278,8 @@ const CallDetails: React.FC = () => {
                                 >
                                     <div
                                         className={`max-w-[80%] p-4 rounded-2xl ${line.speaker === 'user'
-                                                ? 'bg-vani-plum text-white rounded-tr-none'
-                                                : 'bg-white dark:bg-white/10 text-gray-800 dark:text-gray-200 rounded-tl-none border border-gray-100 dark:border-white/5'
+                                            ? 'bg-vani-plum text-white rounded-tr-none'
+                                            : 'bg-white dark:bg-white/10 text-gray-800 dark:text-gray-200 rounded-tl-none border border-gray-100 dark:border-white/5'
                                             }`}
                                     >
                                         <p className="text-xs font-bold uppercase tracking-wider mb-1 opacity-70">

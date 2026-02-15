@@ -22,6 +22,7 @@ import {
 import { useVoices } from '../hooks/useVoices';
 import { createAgent, updateAgent, useAgent } from '../hooks/useAgents';
 import { uploadFile } from '../hooks/useFiles';
+import { usePhoneNumbers } from '../hooks/usePhoneNumbers';
 import VoiceSelect from '../components/VoiceSelect';
 
 interface UploadedFile {
@@ -75,6 +76,8 @@ const CreateAgentWizard: React.FC = () => {
     voiceProvider: '11labs',
     voiceId: '',
     voiceModel: 'eleven_turbo_v2_5',
+    voiceSpeed: 0.85, // 0.5-2.0, lower = slower
+    hinglish: false, // Hinglish mode for Hindi+English mixed speech
 
     // Transcriber configuration
     transcriberProvider: 'deepgram',
@@ -89,10 +92,18 @@ const CreateAgentWizard: React.FC = () => {
     maxDurationSeconds: 600,
     silenceTimeoutSeconds: 30,
     responseDelaySeconds: 0.4,
+
+    // Phone number selection
+    phoneNumberId: '',
   });
 
   // Fetch voices
   const { voices, loading: voicesLoading } = useVoices();
+
+  // Fetch phone numbers
+  const { phoneNumbers } = usePhoneNumbers();
+  console.log('[CreateAgentWizard] phoneNumbers:', phoneNumbers);
+  console.log('[CreateAgentWizard] Twilio numbers:', phoneNumbers?.filter(pn => pn.provider === 'twilio'));
 
   // Pre-populate form when editing or using template
   useEffect(() => {
@@ -120,6 +131,7 @@ const CreateAgentWizard: React.FC = () => {
         voiceProvider: template.voiceProvider || prev.voiceProvider,
         voiceId: template.voiceId || prev.voiceId,
         voiceModel: template.voiceModel || prev.voiceModel,
+        voiceSpeed: template.voiceSpeed ?? prev.voiceSpeed,
 
         // Transcriber
         transcriberProvider: template.transcriberProvider || prev.transcriberProvider,
@@ -171,6 +183,8 @@ const CreateAgentWizard: React.FC = () => {
         voiceProvider: config.voice?.provider || '11labs',
         voiceId: config.voice?.voiceId || '',
         voiceModel: config.voice?.model || 'eleven_turbo_v2_5',
+        voiceSpeed: config.voice?.speed ?? 0.85,
+        hinglish: config.voice?.hinglish ?? false,
 
         // Transcriber
         transcriberProvider: config.transcriber?.provider || 'deepgram',
@@ -185,7 +199,11 @@ const CreateAgentWizard: React.FC = () => {
         maxDurationSeconds: config.maxDurationSeconds ?? 600,
         silenceTimeoutSeconds: config.silenceTimeoutSeconds ?? 30,
         responseDelaySeconds: config.responseDelaySeconds ?? 0.4,
+
+        // Phone number
+        phoneNumberId: existingAgent.phoneNumberId || '',
       }));
+      console.log('[CreateAgentWizard] Loaded phoneNumberId from agent:', existingAgent.phoneNumberId);
 
       setDataLoaded(true);
     }
@@ -247,8 +265,14 @@ const CreateAgentWizard: React.FC = () => {
           provider: formData.voiceProvider,
           voiceId: finalVoiceId,
           model: formData.voiceModel,
-          stability: 0.5,
-          similarityBoost: 0.75,
+          // V3 models don't support voice settings (stability, speed, similarity)
+          ...(!['eleven_v3', 'eleven_ttv_v3'].includes(formData.voiceModel) ? {
+            stability: 0.5,
+            similarityBoost: 0.75,
+            speed: formData.voiceSpeed,
+          } : {}),
+          hinglish: formData.hinglish,
+          language: formData.language,
         } : undefined,
         transcriber: {
           provider: formData.transcriberProvider,
@@ -272,7 +296,7 @@ const CreateAgentWizard: React.FC = () => {
 
       let result;
       if (isEditMode && agentId) {
-        const updatePayload = {
+        const updatePayload: any = {
           name: formData.name,
           status: formData.status,
           configuration: vapiConfig,
@@ -283,9 +307,18 @@ const CreateAgentWizard: React.FC = () => {
             createdBy: 'vani-dashboard'
           }
         };
+
+        // Add phoneNumberId if selected
+        if (formData.phoneNumberId) {
+          updatePayload.phoneNumberId = formData.phoneNumberId;
+        }
+
+        console.log('[CreateAgentWizard] Updating agent with payload:', updatePayload);
+        console.log('[CreateAgentWizard] phoneNumberId being sent:', formData.phoneNumberId);
+
         result = await updateAgent(agentId, updatePayload);
       } else {
-        const createPayload = {
+        const createPayload: any = {
           ...vapiConfig,
           status: 'active',
           metadata: {
@@ -295,6 +328,14 @@ const CreateAgentWizard: React.FC = () => {
             createdBy: 'vani-dashboard'
           }
         };
+
+        // Add phoneNumberId if selected
+        if (formData.phoneNumberId) {
+          createPayload.phoneNumberId = formData.phoneNumberId;
+        }
+
+        console.log('[CreateAgentWizard] Creating agent with payload:', createPayload);
+
         result = await createAgent(createPayload);
       }
 
@@ -321,6 +362,7 @@ const CreateAgentWizard: React.FC = () => {
     { id: 'model', label: 'Model', icon: MessageSquare },
     { id: 'voice', label: 'Voice', icon: Volume2 },
     { id: 'transcriber', label: 'Transcriber', icon: Mic },
+    { id: 'phone', label: 'Phone Number', icon: Phone },
     { id: 'knowledge', label: 'Knowledge', icon: FileText },
     { id: 'advanced', label: 'Advanced', icon: Zap },
   ];
@@ -539,12 +581,39 @@ const CreateAgentWizard: React.FC = () => {
                   onChange={(e) => handleChange('voiceModel', e.target.value)}
                   className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
                 >
-                  <option value="eleven_turbo_v2_5">eleven_turbo_v2_5</option>
-                  <option value="eleven_turbo_v2">eleven_turbo_v2</option>
-                  <option value="eleven_multilingual_v2">eleven_multilingual_v2</option>
-                  <option value="eleven_monolingual_v1">eleven_monolingual_v1</option>
+                  <option value="eleven_turbo_v2_5">Eleven Turbo v2.5</option>
+                  <option value="eleven_turbo_v2">Eleven Turbo v2</option>
+                  <option value="eleven_multilingual_v2">Eleven Multilingual v2</option>
+                  <option value="eleven_flash_v2_5">Eleven Flash v2.5</option>
+                  <option value="eleven_v3">Eleven V3 (Most Expressive)</option>
+                  <option value="eleven_ttv_v3">Eleven V3 Conversational (Best for Calls)</option>
+                  <option value="eleven_monolingual_v1">Eleven Monolingual v1</option>
                 </select>
+                {['eleven_v3', 'eleven_ttv_v3'].includes(formData.voiceModel) && (
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                    ✨ V3 model selected — expressive mode enabled, voice settings (stability, speed) are auto-managed.
+                  </p>
+                )}
               </div>
+            </div>
+
+            {/* Hinglish Toggle */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10">
+              <div>
+                <p className="text-sm font-medium dark:text-white">Hinglish Mode</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Enable Hindi + English mixed speech. Enforces Hindi language pronunciation for the TTS model.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.hinglish}
+                  onChange={(e) => handleChange('hinglish', e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-vani-plum/20 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-vani-plum"></div>
+              </label>
             </div>
 
             {/* Voice Selection */}
@@ -590,6 +659,27 @@ const CreateAgentWizard: React.FC = () => {
                 />
               )}
             </div>
+
+            {/* Voice Speed Control - Only for non-V3 models */}
+            {!['eleven_v3', 'eleven_ttv_v3'].includes(formData.voiceModel) && (
+              <div className="space-y-2">
+                <Label>Voice Speed ({formData.voiceSpeed}x)</Label>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="1.5"
+                  step="0.05"
+                  value={formData.voiceSpeed}
+                  onChange={(e) => handleChange('voiceSpeed', parseFloat(e.target.value))}
+                  className="w-full accent-vani-plum"
+                />
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>Slower (0.5x)</span>
+                  <span>Normal (1.0x)</span>
+                  <span>Faster (1.5x)</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -776,6 +866,74 @@ const CreateAgentWizard: React.FC = () => {
                 />
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Phone Number Tab */}
+        {activeTab === 'phone' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            <h3 className="text-lg font-bold dark:text-white">Phone Number</h3>
+
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Select which phone number this agent will use for making calls. If not selected, the default .env credentials will be used.
+            </p>
+
+            {phoneNumbers.length === 0 ? (
+              <div className="p-8 border-2 border-dashed border-gray-300 dark:border-white/20 rounded-xl text-center">
+                <div className="w-16 h-16 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-4">
+                  <Phone size={32} className="text-gray-400" />
+                </div>
+                <h4 className="text-base font-semibold dark:text-white mb-2">No phone numbers available</h4>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                  Add a Twilio phone number first to use agent-specific credentials.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => window.open('/phone-numbers', '_blank')}
+                >
+                  <Phone size={16} className="mr-2" />
+                  Go to Phone Numbers
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Select Phone Number (Optional)</Label>
+                  <select
+                    value={formData.phoneNumberId}
+                    onChange={(e) => handleChange('phoneNumberId', e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
+                  >
+                    <option value="" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Use default from .env</option>
+                    {phoneNumbers
+                      .map(pn => (
+                        <option key={pn.id} value={pn.id} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                          {pn.name} - {pn.number} ({pn.provider === 'sip-trunk' ? 'SIP Trunk' : 'Twilio'})
+                        </option>
+                      ))}
+                  </select>
+                  <p className="text-xs text-gray-500">
+                    Select a phone number (Twilio or SIP Trunk) to use for this agent's calls.
+                  </p>
+                </div>
+
+                {formData.phoneNumberId && (
+                  <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 size={20} className="text-green-600 dark:text-green-400 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-green-900 dark:text-green-100">
+                          Phone Number Selected
+                        </p>
+                        <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                          This agent will use the selected phone number's Twilio credentials for all outbound calls.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </Card>

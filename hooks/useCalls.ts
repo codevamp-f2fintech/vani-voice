@@ -31,9 +31,11 @@ export function useCalls(options: UseCallsOptions = {}) {
             const queryString = params.toString();
             const endpoint = `/calls/list${queryString ? `?${queryString}` : ''}`;
             const data = await api.get<Call[]>(endpoint);
-            setCalls(data);
+            setCalls(Array.isArray(data) ? data : []);
         } catch (err: any) {
+            console.error('Error loading calls:', err);
             setError(err.message || 'Failed to load calls');
+            setCalls([]); // Set to empty array on error
         } finally {
             setLoading(false);
         }

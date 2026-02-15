@@ -185,7 +185,7 @@ You are a female HR recruiter from India conducting a real job screening call fo
         language: "hi",
 
         // Advanced Config
-        firstMessage: "Hello, mai F2 fintech se Charu bol rahi hoon, Am I speaking with Rahul saxena? this call is regarding the job that you applied for, is it the good time to talk",
+        firstMessage: "Hello, मैं F2 Fintech से चारु बोल रही हूँ, am I speaking with Rahul Saxena? This call is regarding the job that you applied for, क्या यह बात करने का सही समय है?",
         firstMessageMode: "assistant-speaks-first",
         maxDurationSeconds: 600,
         silenceTimeoutSeconds: 30,
