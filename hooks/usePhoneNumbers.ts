@@ -5,11 +5,14 @@ export interface PhoneNumber {
     id: string;
     number: string;
     name: string;
-    provider: string;
+    provider: 'twilio' | 'sip-trunk';
     status: string;
     assistantId: string | null;
     sipUri?: string;
-    credentialId?: string;
+    sipServerIp?: string;
+    sipPort?: number;
+    hasTwilioCredentials?: boolean;
+    hasSipCredentials?: boolean;
     createdAt: string;
 }
 
@@ -96,24 +99,16 @@ export async function importTwilioNumber(data: {
     });
 }
 
-// Vapi SIP creation
-export async function createVapiSip(data: {
-    sipIdentifier: string;
-    name?: string;
-    username?: string;
-    password?: string;
-}) {
-    return api.post('/api/phone-numbers/vapi-sip', data);
-}
-
-// SIP Trunk creation
+// SIP Trunk creation (for SIP trunking with your own provider)
 export async function createSipTrunk(data: {
     number: string;
-    credentialId: string;
     name?: string;
-    numberE164CheckEnabled?: boolean;
+    serverIp: string;
+    username: string;
+    password: string;
+    port?: number;
 }) {
-    return api.post('/vapi/phone-numbers/sip-trunk', data);
+    return api.post('/api/phone-numbers/sip-trunk', data);
 }
 
 // Assign agent to phone number

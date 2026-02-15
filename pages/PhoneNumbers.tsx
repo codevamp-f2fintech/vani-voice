@@ -15,16 +15,14 @@ import {
     usePhoneNumbers,
     useCredentials,
     importTwilioNumber,
-    createVapiSip,
     createSipTrunk,
-    createSipTrunkCredential,
     assignAgentToPhoneNumber,
     deletePhoneNumber,
     PhoneNumber
 } from '../hooks/usePhoneNumbers';
 import { useAgents } from '../hooks/useAgents';
 
-type TabType = 'twilio' | 'did-number';
+type TabType = 'twilio' | 'sip-trunk';
 
 const PhoneNumbers: React.FC = () => {
     const { phoneNumbers, loading, refetch } = usePhoneNumbers();
@@ -39,8 +37,8 @@ const PhoneNumbers: React.FC = () => {
     const [twilioForm, setTwilioForm] = useState({
         number: '', accountSid: '', authToken: '', name: ''
     });
-    const [didNumberForm, setDidNumberForm] = useState({
-        number: '', name: '', username: '', password: '', serverIp: ''
+    const [sipTrunkForm, setSipTrunkForm] = useState({
+        number: '', name: '', username: '', password: '', serverIp: '', port: '5060'
     });
 
     const handleImportTwilio = async () => {
@@ -61,24 +59,26 @@ const PhoneNumbers: React.FC = () => {
         }
     };
 
-    const handleCreateDidNumber = async () => {
-        if (!didNumberForm.number) {
-            alert('DID Number is required');
+    const handleCreateSipTrunk = async () => {
+        if (!sipTrunkForm.number || !sipTrunkForm.serverIp || !sipTrunkForm.username || !sipTrunkForm.password) {
+            alert('Phone Number, SIP Server IP, Username, and Password are required');
             return;
         }
         setSubmitting(true);
         try {
-            await createVapiSip({
-                sipIdentifier: didNumberForm.number,
-                name: didNumberForm.name || `DID ${didNumberForm.number}`,
-                username: didNumberForm.username,
-                password: didNumberForm.password
+            await createSipTrunk({
+                number: sipTrunkForm.number,
+                name: sipTrunkForm.name || `SIP ${sipTrunkForm.number}`,
+                serverIp: sipTrunkForm.serverIp,
+                username: sipTrunkForm.username,
+                password: sipTrunkForm.password,
+                port: parseInt(sipTrunkForm.port) || 5060
             });
-            setDidNumberForm({ number: '', name: '', username: '', password: '', serverIp: '' });
+            setSipTrunkForm({ number: '', name: '', username: '', password: '', serverIp: '', port: '5060' });
             setDialogOpen(false);
             refetch();
         } catch (err: any) {
-            alert(err.message || 'Failed to create DID number');
+            alert(err.message || 'Failed to create SIP Trunk number');
         } finally {
             setSubmitting(false);
         }
@@ -213,11 +213,11 @@ const PhoneNumbers: React.FC = () => {
                                 Twilio Number
                             </Button>
                             <Button
-                                variant={activeTab === 'did-number' ? 'default' : 'outline'}
+                                variant={activeTab === 'sip-trunk' ? 'default' : 'outline'}
                                 size="sm"
-                                onClick={() => setActiveTab('did-number')}
+                                onClick={() => setActiveTab('sip-trunk')}
                             >
-                                DID Number
+                                SIP Trunk
                             </Button>
                         </div>
 
@@ -264,62 +264,72 @@ const PhoneNumbers: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* DID Number Form */}
-                            {activeTab === 'did-number' && (
+                            {/* SIP Trunk Form */}
+                            {activeTab === 'sip-trunk' && (
                                 <div className="space-y-4">
-                                    <div>
-                                        <Label>DID Number *</Label>
-                                        <Input
-                                            value={didNumberForm.number}
-                                            onChange={(e) => setDidNumberForm(f => ({ ...f, number: e.target.value }))}
-                                            placeholder="+14155551234 or custom identifier"
-                                        />
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            Enter your DID number or any unique identifier
+                                    <div className="p-3 bg-blue-50 dark:bg-blue-500/10 rounded-lg border border-blue-200 dark:border-blue-500/20">
+                                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                                            Enter your SIP trunk credentials from your provider. These will be used to make outbound calls.
                                         </p>
                                     </div>
                                     <div>
-                                        <Label>Label (Optional)</Label>
+                                        <Label>Phone Number *</Label>
                                         <Input
-                                            value={didNumberForm.name}
-                                            onChange={(e) => setDidNumberForm(f => ({ ...f, name: e.target.value }))}
-                                            placeholder="My DID Number"
+                                            value={sipTrunkForm.number}
+                                            onChange={(e) => setSipTrunkForm(f => ({ ...f, number: e.target.value }))}
+                                            placeholder="+917447170221"
+                                        />
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Your DID number from the SIP provider
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <Label>SIP Server IP / Domain *</Label>
+                                        <Input
+                                            value={sipTrunkForm.serverIp}
+                                            onChange={(e) => setSipTrunkForm(f => ({ ...f, serverIp: e.target.value }))}
+                                            placeholder="3.109.219.119"
                                         />
                                     </div>
-                                    <div className="border-t pt-4 dark:border-white/10">
-                                        <p className="text-sm font-medium mb-3 dark:text-white">SIP Credentials (Optional)</p>
-                                        <div className="space-y-3">
-                                            <div>
-                                                <Label>Server IP / Domain</Label>
-                                                <Input
-                                                    value={didNumberForm.serverIp}
-                                                    onChange={(e) => setDidNumberForm(f => ({ ...f, serverIp: e.target.value }))}
-                                                    placeholder="sip.provider.com"
-                                                />
-                                            </div>
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div>
-                                                    <Label>Username</Label>
-                                                    <Input
-                                                        value={didNumberForm.username}
-                                                        onChange={(e) => setDidNumberForm(f => ({ ...f, username: e.target.value }))}
-                                                        placeholder="SIP Username"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <Label>Password</Label>
-                                                    <Input
-                                                        type="password"
-                                                        value={didNumberForm.password}
-                                                        onChange={(e) => setDidNumberForm(f => ({ ...f, password: e.target.value }))}
-                                                        placeholder="SIP Password"
-                                                    />
-                                                </div>
-                                            </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <Label>SIP Username *</Label>
+                                            <Input
+                                                value={sipTrunkForm.username}
+                                                onChange={(e) => setSipTrunkForm(f => ({ ...f, username: e.target.value }))}
+                                                placeholder="2002"
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label>SIP Password *</Label>
+                                            <Input
+                                                type="password"
+                                                value={sipTrunkForm.password}
+                                                onChange={(e) => setSipTrunkForm(f => ({ ...f, password: e.target.value }))}
+                                                placeholder="Your SIP password"
+                                            />
                                         </div>
                                     </div>
-                                    <Button onClick={handleCreateDidNumber} disabled={submitting} className="w-full h-12">
-                                        {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating...</> : 'Create DID Number'}
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <Label>SIP Port</Label>
+                                            <Input
+                                                value={sipTrunkForm.port}
+                                                onChange={(e) => setSipTrunkForm(f => ({ ...f, port: e.target.value }))}
+                                                placeholder="5060"
+                                            />
+                                        </div>
+                                        <div>
+                                            <Label>Label (Optional)</Label>
+                                            <Input
+                                                value={sipTrunkForm.name}
+                                                onChange={(e) => setSipTrunkForm(f => ({ ...f, name: e.target.value }))}
+                                                placeholder="My SIP Trunk"
+                                            />
+                                        </div>
+                                    </div>
+                                    <Button onClick={handleCreateSipTrunk} disabled={submitting} className="w-full h-12">
+                                        {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating...</> : 'Create SIP Trunk Number'}
                                     </Button>
                                 </div>
                             )}

@@ -81,6 +81,7 @@ export interface Voice {
     voiceId: string;
     name: string;
     provider: string;
+    category?: string; // 'cloned', 'premade', 'generated', 'professional'
     previewUrl?: string;
     description?: string;
     accent?: string;

@@ -5,7 +5,7 @@ import { Play, Pause, Volume2, Check } from 'lucide-react';
 interface Voice {
     voiceId: string;
     name: string;
-    category?: string;
+    category?: string; // 'cloned', 'premade', 'generated', 'professional'
     description?: string;
     gender?: string;
     accent?: string;
@@ -62,9 +62,13 @@ const VoiceSelect: React.FC<VoiceSelectProps> = ({ voices, selectedVoiceId, onSe
 
     const selectedVoice = voices.find(v => v.voiceId === selectedVoiceId);
 
-    // Group voices by provider
-    const elevenLabsVoices = voices.filter(v => v.provider === '11labs' || v.provider === 'elevenlabs');
-    const otherVoices = voices.filter(v => v.provider !== '11labs' && v.provider !== 'elevenlabs');
+    // Group voices: user's voices first (cloned/professional), then library voices
+    const userVoices = voices.filter(v =>
+        v.category === 'cloned' || v.category === 'professional' || v.category === 'generated'
+    );
+    const libraryVoices = voices.filter(v =>
+        v.category !== 'cloned' && v.category !== 'professional' && v.category !== 'generated'
+    );
 
     return (
         <div className="space-y-3">
@@ -104,13 +108,13 @@ const VoiceSelect: React.FC<VoiceSelectProps> = ({ voices, selectedVoiceId, onSe
 
             {/* Voice List */}
             <div className="max-h-[280px] overflow-y-auto border border-gray-200 dark:border-white/10 rounded-xl">
-                {/* ElevenLabs Voices */}
-                {elevenLabsVoices.length > 0 && (
+                {/* User's Custom Voices */}
+                {userVoices.length > 0 && (
                     <>
-                        <div className="sticky top-0 px-3 py-2 bg-gray-100 dark:bg-white/10 border-b border-gray-200 dark:border-white/10 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                            ElevenLabs Voices
+                        <div className="sticky top-0 px-3 py-2 bg-vani-plum/10 dark:bg-vani-plum/20 border-b border-gray-200 dark:border-white/10 text-[10px] font-bold text-vani-plum uppercase tracking-wider">
+                            ✨ Your Voices ({userVoices.length})
                         </div>
-                        {elevenLabsVoices.map((voice) => (
+                        {userVoices.map((voice) => (
                             <VoiceItem
                                 key={voice.voiceId}
                                 voice={voice}
@@ -127,13 +131,13 @@ const VoiceSelect: React.FC<VoiceSelectProps> = ({ voices, selectedVoiceId, onSe
                     </>
                 )}
 
-                {/* Other Voices */}
-                {otherVoices.length > 0 && (
+                {/* Library Voices */}
+                {libraryVoices.length > 0 && (
                     <>
                         <div className="sticky top-0 px-3 py-2 bg-gray-100 dark:bg-white/10 border-b border-gray-200 dark:border-white/10 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                            Other Voices
+                            ElevenLabs Library
                         </div>
-                        {otherVoices.map((voice) => (
+                        {libraryVoices.map((voice) => (
                             <VoiceItem
                                 key={voice.voiceId}
                                 voice={voice}
@@ -209,6 +213,11 @@ const VoiceItem: React.FC<VoiceItemProps> = ({
                         {voice.name}
                     </p>
                     <p className="text-xs text-gray-500">
+                        {voice.category && voice.category !== 'premade' && (
+                            <span className="inline-block px-1.5 py-0.5 bg-vani-plum/10 text-vani-plum text-[10px] font-medium rounded-md mr-1.5">
+                                {voice.category}
+                            </span>
+                        )}
                         {voice.description || `${voice.gender || ''} ${voice.accent ? `• ${voice.accent}` : ''}`}
                     </p>
                 </div>

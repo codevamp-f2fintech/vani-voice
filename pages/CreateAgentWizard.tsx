@@ -77,6 +77,7 @@ const CreateAgentWizard: React.FC = () => {
     voiceId: '',
     voiceModel: 'eleven_turbo_v2_5',
     voiceSpeed: 0.85, // 0.5-2.0, lower = slower
+    hinglish: false, // Hinglish mode for Hindi+English mixed speech
 
     // Transcriber configuration
     transcriberProvider: 'deepgram',
@@ -183,6 +184,7 @@ const CreateAgentWizard: React.FC = () => {
         voiceId: config.voice?.voiceId || '',
         voiceModel: config.voice?.model || 'eleven_turbo_v2_5',
         voiceSpeed: config.voice?.speed ?? 0.85,
+        hinglish: config.voice?.hinglish ?? false,
 
         // Transcriber
         transcriberProvider: config.transcriber?.provider || 'deepgram',
@@ -263,9 +265,14 @@ const CreateAgentWizard: React.FC = () => {
           provider: formData.voiceProvider,
           voiceId: finalVoiceId,
           model: formData.voiceModel,
-          stability: 0.5,
-          similarityBoost: 0.75,
-          speed: formData.voiceSpeed, // Voice speed setting
+          // V3 models don't support voice settings (stability, speed, similarity)
+          ...(!['eleven_v3', 'eleven_ttv_v3'].includes(formData.voiceModel) ? {
+            stability: 0.5,
+            similarityBoost: 0.75,
+            speed: formData.voiceSpeed,
+          } : {}),
+          hinglish: formData.hinglish,
+          language: formData.language,
         } : undefined,
         transcriber: {
           provider: formData.transcriberProvider,
@@ -574,12 +581,39 @@ const CreateAgentWizard: React.FC = () => {
                   onChange={(e) => handleChange('voiceModel', e.target.value)}
                   className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
                 >
-                  <option value="eleven_turbo_v2_5">eleven_turbo_v2_5</option>
-                  <option value="eleven_turbo_v2">eleven_turbo_v2</option>
-                  <option value="eleven_multilingual_v2">eleven_multilingual_v2</option>
-                  <option value="eleven_monolingual_v1">eleven_monolingual_v1</option>
+                  <option value="eleven_turbo_v2_5">Eleven Turbo v2.5</option>
+                  <option value="eleven_turbo_v2">Eleven Turbo v2</option>
+                  <option value="eleven_multilingual_v2">Eleven Multilingual v2</option>
+                  <option value="eleven_flash_v2_5">Eleven Flash v2.5</option>
+                  <option value="eleven_v3">Eleven V3 (Most Expressive)</option>
+                  <option value="eleven_ttv_v3">Eleven V3 Conversational (Best for Calls)</option>
+                  <option value="eleven_monolingual_v1">Eleven Monolingual v1</option>
                 </select>
+                {['eleven_v3', 'eleven_ttv_v3'].includes(formData.voiceModel) && (
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                    ✨ V3 model selected — expressive mode enabled, voice settings (stability, speed) are auto-managed.
+                  </p>
+                )}
               </div>
+            </div>
+
+            {/* Hinglish Toggle */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10">
+              <div>
+                <p className="text-sm font-medium dark:text-white">Hinglish Mode</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Enable Hindi + English mixed speech. Enforces Hindi language pronunciation for the TTS model.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.hinglish}
+                  onChange={(e) => handleChange('hinglish', e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-vani-plum/20 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-vani-plum"></div>
+              </label>
             </div>
 
             {/* Voice Selection */}
@@ -626,24 +660,26 @@ const CreateAgentWizard: React.FC = () => {
               )}
             </div>
 
-            {/* Voice Speed Control */}
-            <div className="space-y-2">
-              <Label>Voice Speed ({formData.voiceSpeed}x)</Label>
-              <input
-                type="range"
-                min="0.5"
-                max="1.5"
-                step="0.05"
-                value={formData.voiceSpeed}
-                onChange={(e) => handleChange('voiceSpeed', parseFloat(e.target.value))}
-                className="w-full accent-vani-plum"
-              />
-              <div className="flex justify-between text-xs text-gray-500">
-                <span>Slower (0.5x)</span>
-                <span>Normal (1.0x)</span>
-                <span>Faster (1.5x)</span>
+            {/* Voice Speed Control - Only for non-V3 models */}
+            {!['eleven_v3', 'eleven_ttv_v3'].includes(formData.voiceModel) && (
+              <div className="space-y-2">
+                <Label>Voice Speed ({formData.voiceSpeed}x)</Label>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="1.5"
+                  step="0.05"
+                  value={formData.voiceSpeed}
+                  onChange={(e) => handleChange('voiceSpeed', parseFloat(e.target.value))}
+                  className="w-full accent-vani-plum"
+                />
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>Slower (0.5x)</span>
+                  <span>Normal (1.0x)</span>
+                  <span>Faster (1.5x)</span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -866,19 +902,18 @@ const CreateAgentWizard: React.FC = () => {
                   <select
                     value={formData.phoneNumberId}
                     onChange={(e) => handleChange('phoneNumberId', e.target.value)}
-                    className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-white/10 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
                   >
-                    <option value="">Use default from .env</option>
+                    <option value="" className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">Use default from .env</option>
                     {phoneNumbers
-                      .filter(pn => pn.provider === 'twilio')
                       .map(pn => (
-                        <option key={pn.id} value={pn.id}>
-                          {pn.name} - {pn.number}
+                        <option key={pn.id} value={pn.id} className="bg-white dark:bg-gray-800 text-gray-900 dark:text-white">
+                          {pn.name} - {pn.number} ({pn.provider === 'sip-trunk' ? 'SIP Trunk' : 'Twilio'})
                         </option>
                       ))}
                   </select>
                   <p className="text-xs text-gray-500">
-                    Only Twilio numbers can be used for independent calls. VAPI SIP numbers are not shown.
+                    Select a phone number (Twilio or SIP Trunk) to use for this agent's calls.
                   </p>
                 </div>
 
