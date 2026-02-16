@@ -40,7 +40,7 @@ export function usePhoneNumbers() {
         try {
             setLoading(true);
             setError(null);
-            const data = await api.get<PhoneNumbersResponse>('/vapi/phone-numbers');
+            const data = await api.get<PhoneNumbersResponse>('/elevenlabs/phone-numbers');
             if (data.success) {
                 setPhoneNumbers(data.phoneNumbers);
             }
@@ -88,7 +88,7 @@ export async function importTwilioNumber(data: {
     authToken: string;
     name?: string;
 }) {
-    return api.post('/vapi/phone-numbers/twilio', {
+    return api.post('/elevenlabs/phone-numbers/twilio', {
         number: data.number,
         twilioAccountSid: data.accountSid,
         twilioAuthToken: data.authToken,
@@ -96,34 +96,25 @@ export async function importTwilioNumber(data: {
     });
 }
 
-// Vapi SIP creation
-export async function createVapiSip(data: {
-    sipIdentifier: string;
-    name?: string;
-    username?: string;
-    password?: string;
-}) {
-    return api.post('/vapi/phone-numbers/vapi-sip', data);
-}
-
 // SIP Trunk creation
+// Note: ElevenLabs may not support SIP trunk creation via API, verify documentation
 export async function createSipTrunk(data: {
     number: string;
     credentialId: string;
     name?: string;
     numberE164CheckEnabled?: boolean;
 }) {
-    return api.post('/vapi/phone-numbers/sip-trunk', data);
+    return api.post('/elevenlabs/phone-numbers/sip-trunk', data);
 }
 
 // Assign agent to phone number
 export async function assignAgentToPhoneNumber(phoneNumberId: string, assistantId: string | null) {
-    return api.patch(`/vapi/phone-numbers/${phoneNumberId}/assign`, { assistantId });
+    return api.patch(`/elevenlabs/phone-numbers/${phoneNumberId}/assign`, { agentId: assistantId });
 }
 
 // Delete phone number
 export async function deletePhoneNumber(id: string) {
-    return api.delete(`/vapi/phone-numbers/${id}`);
+    return api.delete(`/elevenlabs/phone-numbers/${id}`);
 }
 
 // Create SIP Trunk credential

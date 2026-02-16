@@ -14,7 +14,7 @@ export function useAgents(search?: string) {
             const params = new URLSearchParams();
             if (search) params.set('search', search);
             const queryString = params.toString();
-            const endpoint = `/vapi/agents${queryString ? `?${queryString}` : ''}`;
+            const endpoint = `/elevenlabs/agents${queryString ? `?${queryString}` : ''}`;
             const data = await api.get<AgentListResponse>(endpoint);
             if (data.success) {
                 setAgents(data.data);
@@ -45,7 +45,7 @@ export function useAgent(id: string | null) {
             try {
                 setLoading(true);
                 setError(null);
-                const data = await api.get<AgentResponse>(`/vapi/agents/${id}`);
+                const data = await api.get<AgentResponse>(`/elevenlabs/agents/${id}`);
                 if (data.success) {
                     setAgent(data.agent);
                 }
@@ -71,7 +71,7 @@ export function useAgentStats() {
         const loadStats = async () => {
             try {
                 setLoading(true);
-                const data = await api.get<AgentStatsResponse>('/vapi/agents/stats/overview');
+                const data = await api.get<AgentStatsResponse>('/elevenlabs/agents/stats/overview');
                 if (data.success) {
                     setStats(data.stats);
                 }
@@ -89,13 +89,13 @@ export function useAgentStats() {
 }
 
 export async function createAgent(config: any): Promise<AgentResponse> {
-    return api.post<AgentResponse>('/vapi/agents', config);
+    return api.post<AgentResponse>('/elevenlabs/agents', config);
 }
 
 export async function updateAgent(id: string, updates: any): Promise<AgentResponse> {
-    return api.patch<AgentResponse>(`/vapi/agents/${id}`, updates);
+    return api.patch<AgentResponse>(`/elevenlabs/agents/${id}`, updates);
 }
 
 export async function deleteAgent(id: string): Promise<{ success: boolean; message: string }> {
-    return api.delete(`/vapi/agents/${id}`);
+    return api.delete(`/elevenlabs/agents/${id}`);
 }

@@ -74,7 +74,7 @@ const CreateAgentWizard: React.FC = () => {
     // Voice configuration
     voiceProvider: '11labs',
     voiceId: '',
-    voiceModel: 'eleven_multilingual_v2',
+    voiceModel: 'eleven_turbo_v2_5',  // Best for conversational AI
     hinglish: false,
 
     // Transcriber configuration
@@ -240,44 +240,38 @@ const CreateAgentWizard: React.FC = () => {
     try {
       setSaving(true);
 
-      // Build VAPI configuration
-      const vapiConfig: any = {
+      // Build ElevenLabs configuration
+      const elevenLabsConfig: any = {
         name: formData.name,
-        model: {
-          provider: formData.modelProvider,
-          model: formData.modelName,
-          messages: [{ role: 'system', content: formData.systemPrompt }],
-          temperature: parseFloat(formData.temperature as any),
-          maxTokens: parseInt(formData.maxTokens as any),
+        conversation_config: {
+          agent: {
+            prompt: {
+              prompt: formData.systemPrompt,
+            },
+            first_message: formData.firstMessage,
+            language: formData.language || 'en',
+          },
+          tts: finalVoiceId ? {
+            voice_id: finalVoiceId,
+            model_id: formData.voiceModel,
+            optimize_streaming_latency: 3,
+            output_format: 'pcm_24000',
+          } : undefined,
+          asr: {
+            quality: 'high',
+            provider: 'elevenlabs', // ElevenLabs only accepts 'elevenlabs' or 'scribe_realtime'
+            language: formData.language || 'en',
+          },
         },
-        voice: finalVoiceId ? {
-          provider: formData.voiceProvider,
-          voiceId: finalVoiceId,
-          model: formData.voiceModel,
-          // Only include voice settings for non-v3 models (v3 doesn't support these)
-          ...(isV3Model(formData.voiceModel) ? {} : {
-            stability: 0.5,
-            similarityBoost: 0.75,
-          }),
-        } : undefined,
-        transcriber: {
-          provider: formData.transcriberProvider,
-          model: formData.transcriberModel,
-          language: formData.language,
-        },
-        firstMessage: formData.firstMessage,
-        firstMessageMode: formData.firstMessageMode,
-        maxDurationSeconds: parseInt(formData.maxDurationSeconds as any),
-        silenceTimeoutSeconds: parseInt(formData.silenceTimeoutSeconds as any),
-        responseDelaySeconds: parseFloat(formData.responseDelaySeconds as any),
       };
 
       // Add knowledge base if files uploaded
       if (uploadedFiles.length > 0) {
-        vapiConfig.model.knowledgeBase = {
-          provider: 'google',
-          fileIds: uploadedFiles.map(f => f.id)
-        };
+        elevenLabsConfig.conversation_config.agent.prompt.knowledge_base = uploadedFiles.map(f => ({
+          type: 'file',
+          id: f.id,
+          name: f.name,
+        }));
       }
 
       let result;
@@ -285,7 +279,7 @@ const CreateAgentWizard: React.FC = () => {
         const updatePayload = {
           name: formData.name,
           status: formData.status,
-          configuration: vapiConfig,
+          configuration: elevenLabsConfig.conversation_config,
           metadata: {
             description: formData.description,
             category: formData.category,
@@ -296,8 +290,7 @@ const CreateAgentWizard: React.FC = () => {
         result = await updateAgent(agentId, updatePayload);
       } else {
         const createPayload = {
-          ...vapiConfig,
-          status: 'active',
+          ...elevenLabsConfig,
           metadata: {
             description: formData.description,
             category: formData.category,
@@ -536,7 +529,7 @@ const CreateAgentWizard: React.FC = () => {
                   onChange={(e) => handleChange('voiceProvider', e.target.value)}
                   className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
                 >
-                  <option value="11labs">ElevenLabs</option>
+                  <option value="11labs">Voice AI</option>
                   <option value="azure">Azure</option>
                   <option value="playht">PlayHT</option>
                   <option value="deepgram">Deepgram</option>
@@ -549,13 +542,12 @@ const CreateAgentWizard: React.FC = () => {
                   onChange={(e) => handleChange('voiceModel', e.target.value)}
                   className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
                 >
-                  <option value="eleven_turbo_v2_5">Eleven Turbo v2.5 (Fast)</option>
+                  <option value="eleven_turbo_v2_5">Eleven Turbo v2.5 (Recommended - Fast & Quality)</option>
+                  <option value="eleven_flash_v2_5">Eleven Flash v2.5 (Ultra-Fast - 75ms latency)</option>
+                  <option value="eleven_multilingual_v2">Eleven Multilingual v2 (Best for Hindi)</option>
                   <option value="eleven_turbo_v2">Eleven Turbo v2</option>
-                  <option value="eleven_multilingual_v2">Eleven Multilingual v2 (Recommended for Hindi)</option>
                   <option value="eleven_monolingual_v1">Eleven Monolingual v1</option>
-                  <option value="eleven_flash_v2_5">Eleven Flash v2.5 (Lowest Latency)</option>
                   <option value="eleven_flash_v2">Eleven Flash v2</option>
-                  <option value="eleven_v3">Eleven V3 (Best for Hindi/Hinglish)</option>
                 </select>
               </div>
             </div>
@@ -615,11 +607,11 @@ const CreateAgentWizard: React.FC = () => {
                   <Input
                     value={manualVoiceId}
                     onChange={(e) => setManualVoiceId(e.target.value)}
-                    placeholder="Enter ElevenLabs Voice ID"
+                    placeholder="Enter Voice ID"
                     className="h-12"
                   />
                   <p className="text-xs text-gray-500">
-                    Enter the Voice ID from your ElevenLabs account
+                    Enter the Voice ID from your voice provider account
                   </p>
                 </div>
               ) : voicesLoading ? (
@@ -641,48 +633,32 @@ const CreateAgentWizard: React.FC = () => {
         {/* Transcriber Tab */}
         {activeTab === 'transcriber' && (
           <div className="space-y-6 animate-in fade-in duration-200">
-            <h3 className="text-lg font-bold dark:text-white">Transcriber Configuration</h3>
+            <h3 className="text-lg font-bold dark:text-white">Speech Recognition (ASR)</h3>
 
-            <div className="space-y-2">
-              <Label>Transcriber Provider</Label>
-              <select
-                value={formData.transcriberProvider}
-                onChange={(e) => handleChange('transcriberProvider', e.target.value)}
-                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
-              >
-                <option value="deepgram">Deepgram</option>
-                <option value="assembly-ai">AssemblyAI</option>
-                <option value="gladia">Gladia</option>
-              </select>
+            <div className="flex items-center gap-2 text-blue-600 text-sm bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-3 rounded-xl">
+              <AlertCircle size={16} />
+              Voice AI uses its own high-quality ASR system optimized for conversational AI. Provider and model are managed automatically.
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Model</Label>
-                <Input
-                  value={formData.transcriberModel}
-                  onChange={(e) => handleChange('transcriberModel', e.target.value)}
-                  placeholder="nova-2"
-                  className="h-12"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Language</Label>
-                <select
-                  value={formData.language}
-                  onChange={(e) => handleChange('language', e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
-                >
-                  <option value="hi">Hindi</option>
-                  <option value="en">English</option>
-                  <option value="es">Spanish</option>
-                  <option value="fr">French</option>
-                  <option value="de">German</option>
-                  <option value="ta">Tamil</option>
-                  <option value="te">Telugu</option>
-                  <option value="mr">Marathi</option>
-                </select>
-              </div>
+            <div className="space-y-2">
+              <Label>Language</Label>
+              <select
+                value={formData.language}
+                onChange={(e) => handleChange('language', e.target.value)}
+                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
+              >
+                <option value="hi">Hindi</option>
+                <option value="en">English</option>
+                <option value="es">Spanish</option>
+                <option value="fr">French</option>
+                <option value="de">German</option>
+                <option value="ta">Tamil</option>
+                <option value="te">Telugu</option>
+                <option value="mr">Marathi</option>
+              </select>
+              <p className="text-xs text-gray-500">
+                Select the primary language for speech recognition during calls
+              </p>
             </div>
           </div>
         )}

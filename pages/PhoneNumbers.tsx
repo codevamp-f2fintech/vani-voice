@@ -15,7 +15,6 @@ import {
     usePhoneNumbers,
     useCredentials,
     importTwilioNumber,
-    createVapiSip,
     createSipTrunk,
     createSipTrunkCredential,
     assignAgentToPhoneNumber,
@@ -24,7 +23,7 @@ import {
 } from '../hooks/usePhoneNumbers';
 import { useAgents } from '../hooks/useAgents';
 
-type TabType = 'twilio' | 'vapi-sip' | 'sip-trunk';
+type TabType = 'twilio' | 'sip-trunk';
 
 const PhoneNumbers: React.FC = () => {
     const { phoneNumbers, loading, refetch } = usePhoneNumbers();
@@ -38,9 +37,6 @@ const PhoneNumbers: React.FC = () => {
     // Form states
     const [twilioForm, setTwilioForm] = useState({
         number: '', accountSid: '', authToken: '', name: ''
-    });
-    const [vapiSipForm, setVapiSipForm] = useState({
-        sipIdentifier: '', name: '', username: '', password: ''
     });
     const [sipTrunkForm, setSipTrunkForm] = useState({
         number: '', credentialId: '', name: '', allowNonE164: false
@@ -67,23 +63,6 @@ const PhoneNumbers: React.FC = () => {
         }
     };
 
-    const handleCreateVapiSip = async () => {
-        if (!vapiSipForm.sipIdentifier) {
-            alert('SIP Identifier is required');
-            return;
-        }
-        setSubmitting(true);
-        try {
-            await createVapiSip(vapiSipForm);
-            setVapiSipForm({ sipIdentifier: '', name: '', username: '', password: '' });
-            setDialogOpen(false);
-            refetch();
-        } catch (err: any) {
-            alert(err.message || 'Failed to create Vapi SIP');
-        } finally {
-            setSubmitting(false);
-        }
-    };
 
     const handleCreateSipTrunk = async () => {
         if (!sipTrunkForm.number || !sipTrunkForm.credentialId) {
@@ -145,7 +124,7 @@ const PhoneNumbers: React.FC = () => {
 
     const getAgentName = (assistantId: string | null): string => {
         if (!assistantId) return 'Not assigned';
-        const agent = agents.find(a => a.vapiAssistantId === assistantId);
+        const agent = agents.find(a => a.elevenLabsAgentId === assistantId);
         return agent?.name || 'Unknown Agent';
     };
 
@@ -211,7 +190,7 @@ const PhoneNumbers: React.FC = () => {
                                         >
                                             <option value="unassigned">Not assigned</option>
                                             {agents.map(a => (
-                                                <option key={a._id} value={a.vapiAssistantId}>{a.name}</option>
+                                                <option key={a._id} value={a.elevenLabsAgentId}>{a.name}</option>
                                             ))}
                                         </select>
                                     </div>
@@ -251,13 +230,6 @@ const PhoneNumbers: React.FC = () => {
                                 onClick={() => setActiveTab('twilio')}
                             >
                                 Import Twilio
-                            </Button>
-                            <Button
-                                variant={activeTab === 'vapi-sip' ? 'default' : 'outline'}
-                                size="sm"
-                                onClick={() => setActiveTab('vapi-sip')}
-                            >
-                                Free Vapi SIP
                             </Button>
                             <Button
                                 variant={activeTab === 'sip-trunk' ? 'default' : 'outline'}
@@ -311,55 +283,6 @@ const PhoneNumbers: React.FC = () => {
                                 </div>
                             )}
 
-                            {/* Vapi SIP Form */}
-                            {activeTab === 'vapi-sip' && (
-                                <div className="space-y-4">
-                                    <div>
-                                        <Label>SIP Identifier *</Label>
-                                        <Input
-                                            value={vapiSipForm.sipIdentifier}
-                                            onChange={(e) => setVapiSipForm(f => ({ ...f, sipIdentifier: e.target.value }))}
-                                            placeholder="my-example-identifier"
-                                        />
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            Will be used as: sip:{vapiSipForm.sipIdentifier || 'identifier'}@sip.vapi.ai
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <Label>Label (Optional)</Label>
-                                        <Input
-                                            value={vapiSipForm.name}
-                                            onChange={(e) => setVapiSipForm(f => ({ ...f, name: e.target.value }))}
-                                            placeholder="Label for SIP URI"
-                                        />
-                                    </div>
-                                    <div className="border-t pt-4 dark:border-white/10">
-                                        <p className="text-sm font-medium mb-3 dark:text-white">SIP Authentication (Optional)</p>
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <Label>Username</Label>
-                                                <Input
-                                                    value={vapiSipForm.username}
-                                                    onChange={(e) => setVapiSipForm(f => ({ ...f, username: e.target.value }))}
-                                                    placeholder="SIP Username"
-                                                />
-                                            </div>
-                                            <div>
-                                                <Label>Password</Label>
-                                                <Input
-                                                    type="password"
-                                                    value={vapiSipForm.password}
-                                                    onChange={(e) => setVapiSipForm(f => ({ ...f, password: e.target.value }))}
-                                                    placeholder="SIP Password"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <Button onClick={handleCreateVapiSip} disabled={submitting} className="w-full h-12">
-                                        {submitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating...</> : 'Create Vapi SIP'}
-                                    </Button>
-                                </div>
-                            )}
 
                             {/* SIP Trunk Form */}
                             {activeTab === 'sip-trunk' && (

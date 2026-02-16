@@ -1,10 +1,12 @@
 
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Card, Button, Input, Label, Badge } from '../components/UI';
-import { Phone, Users, Loader2, PhoneCall, ArrowRight } from 'lucide-react';
+import { Phone, Users, Loader2, PhoneCall, ArrowRight, RefreshCw, Cloud } from 'lucide-react';
 import { useAgents } from '../hooks/useAgents';
 import { useOutboundCall, validateE164 } from '../hooks/useOutboundCall';
+import { api } from '../lib/api';
 
 const TestCall: React.FC = () => {
     const navigate = useNavigate();
@@ -14,11 +16,34 @@ const TestCall: React.FC = () => {
     const [phoneNumber, setPhoneNumber] = useState('+91');
     const [selectedAgentId, setSelectedAgentId] = useState(preselectedAgentId || 'default');
     const [callResult, setCallResult] = useState<any>(null);
+    const [showElevenLabsAgents, setShowElevenLabsAgents] = useState(true);
+    const [elevenLabsAgents, setElevenLabsAgents] = useState<any[]>([]);
+    const [loadingElevenLabs, setLoadingElevenLabs] = useState(false);
 
     const { agents, loading: agentsLoading } = useAgents();
     const { makeCall, loading: calling, error } = useOutboundCall();
 
     const activeAgents = agents.filter(a => a.status === 'active');
+
+    // Fetch agents from ElevenLabs
+    const fetchElevenLabsAgents = async () => {
+        setLoadingElevenLabs(true);
+        try {
+            const result = await api.get<any>('/elevenlabs/agents/sync/from-elevenlabs');
+            console.log('ElevenLabs sync result:', result);
+            setElevenLabsAgents(result.data || []);
+        } catch (error) {
+            console.error('Error fetching ElevenLabs agents:', error);
+            setElevenLabsAgents([]);
+        } finally {
+            setLoadingElevenLabs(false);
+        }
+    };
+
+    // Auto-fetch ElevenLabs agents on mount
+    useEffect(() => {
+        fetchElevenLabsAgents();
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -66,13 +91,45 @@ const TestCall: React.FC = () => {
                         </p>
                     </div>
 
+                    {/* Agent Source Toggle */}
+                    <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+                        <Cloud size={20} className="text-blue-600" />
+                        <div className="flex-1">
+                            <p className="text-sm font-medium text-blue-900 dark:text-blue-200">
+                                {showElevenLabsAgents ? 'Showing Cloud Dashboard Agents' : 'Showing Local Database Agents'}
+                            </p>
+                            <p className="text-xs text-blue-600 dark:text-blue-400">
+                                {showElevenLabsAgents ? 'Includes V3 agents created in the cloud dashboard' : 'Only agents saved in your database'}
+                            </p>
+                        </div>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowElevenLabsAgents(!showElevenLabsAgents)}
+                        >
+                            {showElevenLabsAgents ? 'Switch to Local' : 'Switch to Cloud'}
+                        </Button>
+                        {showElevenLabsAgents && (
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={fetchElevenLabsAgents}
+                                disabled={loadingElevenLabs}
+                            >
+                                <RefreshCw size={16} className={loadingElevenLabs ? 'animate-spin' : ''} />
+                            </Button>
+                        )}
+                    </div>
+
                     {/* Agent Selection */}
                     <div className="space-y-3">
                         <Label className="flex items-center gap-2 text-base">
                             <Users size={18} className="text-vani-plum" />
                             Select Agent
                         </Label>
-                        {agentsLoading ? (
+                        {(agentsLoading || loadingElevenLabs) ? (
                             <div className="flex items-center gap-2 text-gray-500">
                                 <Loader2 size={16} className="animate-spin" />
                                 Loading agents...
@@ -81,20 +138,48 @@ const TestCall: React.FC = () => {
                             <select
                                 value={selectedAgentId}
                                 onChange={(e) => setSelectedAgentId(e.target.value)}
-                                className="w-full h-14 px-4 bg-gray-50 dark:bg-white/5 border-2 border-gray-100 dark:border-white/10 rounded-xl text-base dark:text-white outline-none focus:border-vani-plum font-medium"
+                                className="w-full h-14 px-4 bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 rounded-xl text-base text-gray-900 dark:text-gray-100 outline-none focus:border-vani-plum focus:ring-2 focus:ring-vani-plum/20 font-medium transition-all"
+                                style={{
+                                    colorScheme: 'dark'
+                                }}
                             >
-                                <option value="default">Default Agent</option>
-                                {activeAgents.map(agent => (
-                                    <option key={agent._id} value={agent._id}>
-                                        {agent.name}
-                                    </option>
-                                ))}
+                                <option value="default" className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+                                    Default Agent
+                                </option>
+                                {showElevenLabsAgents ? (
+                                    // Show ElevenLabs agents
+                                    elevenLabsAgents.map(agent => (
+                                        <option
+                                            key={agent.agent_id}
+                                            value={agent.agent_id}
+                                            className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                                        >
+                                            🌐 {agent.name || 'Unnamed Agent'} (Cloud)
+                                        </option>
+                                    ))
+                                ) : (
+                                    // Show local database agents
+                                    activeAgents.map(agent => (
+                                        <option
+                                            key={agent._id}
+                                            value={agent._id}
+                                            className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100"
+                                        >
+                                            {agent.name}
+                                        </option>
+                                    ))
+                                )}
                             </select>
                         )}
-                        <p className="text-xs text-gray-500">
-                            Select a custom agent or use the default one.
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                            {showElevenLabsAgents
+                                ? `${elevenLabsAgents.length} cloud agents (including V3 models)`
+                                : `${activeAgents.length} active agents from your database`
+                            }
                         </p>
                     </div>
+
+
 
                     {/* Error Display */}
                     {error && (

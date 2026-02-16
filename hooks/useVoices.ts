@@ -13,7 +13,7 @@ export function useVoices() {
             try {
                 setLoading(true);
                 setError(null);
-                const data = await api.get<VoiceListResponse>('/vapi/voices');
+                const data = await api.get<VoiceListResponse>('/elevenlabs/voices');
                 if (data.success) {
                     setVoices(data.voices);
                     setProviders(data.providers || []);
