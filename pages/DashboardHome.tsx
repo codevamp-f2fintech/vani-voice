@@ -45,52 +45,116 @@ const DashboardHome: React.FC = () => {
   const { agents, loading: agentsLoading } = useAgents();
   const { calls, loading: callsLoading } = useCalls({ limit: 5 });
 
-  const dashboardStats = useMemo(() => [
-    {
-      label: 'Total Calls',
-      value: stats?.totalCalls?.toLocaleString() || '0',
-      trend: '+12%',
-      icon: PhoneCall,
-      color: '#560BAD'
-    },
-    {
-      label: 'Success Rate',
-      value: stats?.totalCalls
-        ? `${Math.round((stats.successfulCalls / stats.totalCalls) * 100)}%`
-        : '0%',
-      trend: '+3%',
-      icon: TrendingUp,
-      color: '#10B981'
-    },
-    {
-      label: 'Active Agents',
-      value: stats?.activeAgents?.toString() || '0',
-      trend: '0%',
-      icon: Users,
-      color: '#F72585'
-    },
-    {
-      label: 'Total Agents',
-      value: stats?.totalAgents?.toString() || '0',
-      trend: '+8%',
-      icon: Clock,
-      color: '#B5179E'
-    },
-  ], [stats]);
+  /* 
+   * DUMMY DATA FOR DEMO PURPOSES
+   * The user requested that if no data is available (0 values), we should show realistic dummy data
+   * so that the dashboard doesn't look empty.
+   */
+
+  const dashboardStats = useMemo(() => {
+    // Check if we have real data
+    const hasData = stats?.totalCalls && stats.totalCalls > 0;
+
+    if (hasData) {
+      return [
+        {
+          label: 'Total Calls',
+          value: stats?.totalCalls?.toLocaleString() || '0',
+          trend: '+12%',
+          icon: PhoneCall,
+          color: '#560BAD'
+        },
+        {
+          label: 'Success Rate',
+          value: `${Math.round((stats.successfulCalls / stats.totalCalls) * 100)}%`,
+          trend: '+3%',
+          icon: TrendingUp,
+          color: '#10B981'
+        },
+        {
+          label: 'Active Agents',
+          value: stats?.activeAgents?.toString() || '0',
+          trend: '0%',
+          icon: Users,
+          color: '#F72585'
+        },
+        {
+          label: 'Total Agents',
+          value: stats?.totalAgents?.toString() || '0',
+          trend: '+8%',
+          icon: Clock,
+          color: '#B5179E'
+        },
+      ];
+    }
+
+    // Return DUMMY data if no real data
+    return [
+      {
+        label: 'Total Calls',
+        value: '1,248',
+        trend: '+18%',
+        icon: PhoneCall,
+        color: '#560BAD'
+      },
+      {
+        label: 'Success Rate',
+        value: '94%',
+        trend: '+5%',
+        icon: TrendingUp,
+        color: '#10B981'
+      },
+      {
+        label: 'Active Agents',
+        value: '8',
+        trend: '+2',
+        icon: Users,
+        color: '#F72585'
+      },
+      {
+        label: 'Total Agents',
+        value: '12',
+        trend: '+4',
+        icon: Clock,
+        color: '#B5179E'
+      },
+    ];
+  }, [stats]);
 
   const recentCalls = useMemo(() => {
-    return calls.slice(0, 4).map(call => ({
-      id: call._id,
-      name: call.agentName || 'Unknown Agent',
-      duration: formatDuration(call.startedAt, call.endedAt),
-      cost: formatCost(call.cost),
-      time: call.createdAt ? new Date(call.createdAt).toLocaleString() : '—',
-      status: call.status === 'ended' ? 'Completed' : call.status || 'Unknown'
-    }));
+    if (calls && calls.length > 0) {
+      return calls.slice(0, 4).map(call => ({
+        id: call._id,
+        name: call.agentName || 'Unknown Agent',
+        duration: formatDuration(call.startedAt, call.endedAt),
+        cost: formatCost(call.cost),
+        time: call.createdAt ? new Date(call.createdAt).toLocaleString() : '—',
+        status: call.status === 'ended' ? 'Completed' : call.status || 'Unknown'
+      }));
+    }
+
+    // DUMMY recent calls
+    return [
+      { id: '1', name: 'Loan Recovery Agent', duration: '2m 14s', cost: '$0.12', time: new Date(Date.now() - 1000 * 60 * 5).toLocaleString(), status: 'Completed' },
+      { id: '2', name: 'Lead Qualification', duration: '45s', cost: '$0.05', time: new Date(Date.now() - 1000 * 60 * 25).toLocaleString(), status: 'Completed' },
+      { id: '3', name: 'Appointment Setter', duration: '1m 30s', cost: '$0.08', time: new Date(Date.now() - 1000 * 60 * 60).toLocaleString(), status: 'Completed' },
+      { id: '4', name: 'Customer Support', duration: '5m 12s', cost: '$0.45', time: new Date(Date.now() - 1000 * 60 * 120).toLocaleString(), status: 'Failed' },
+    ];
   }, [calls]);
 
   const activeAgentsList = useMemo(() => {
-    return agents.filter(a => a.status === 'active').slice(0, 3);
+    const active = agents.filter(a => a.status === 'active');
+
+    if (active.length > 0) {
+      return active.slice(0, 3);
+    }
+
+    // DUMMY active agents
+    return [
+      { _id: 'd1', name: 'Sales Assistant', status: 'active', metadata: { category: 'Sales' }, statistics: { totalCalls: 450 } },
+      { _id: 'd2', name: 'Support Bot', status: 'active', metadata: { category: 'Support' }, statistics: { totalCalls: 1200 } },
+      { _id: 'd3', name: 'Survey Conductor', status: 'active', metadata: { category: 'Research' }, statistics: { totalCalls: 89 } },
+    ];
   }, [agents]);
 
   const isLoading = statsLoading || callsLoading || agentsLoading;
