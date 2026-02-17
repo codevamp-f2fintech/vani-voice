@@ -73,10 +73,7 @@ export default function VoiceAgent() {
 
             // Start ElevenLabs conversation with the active agent's ID
             // Fallback to the default ID if the specific one isn't ready
-            const agentId = activeAgent.id.startsWith("agent_")
-                ? "agent_9001kbc7zs0rf1camvhwkxxxmqxp"
-                : activeAgent.id;
-
+            const agentId = activeAgent.id;
             const conversationOptions: any = {
                 agentId: agentId,
                 connectionType: "webrtc",
