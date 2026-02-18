@@ -279,7 +279,7 @@ const CreateAgentWizard: React.FC = () => {
         const updatePayload = {
           name: formData.name,
           status: formData.status,
-          configuration: elevenLabsConfig.conversation_config,
+          configuration: elevenLabsConfig, // Pass the full config object which contains conversation_config
           metadata: {
             description: formData.description,
             category: formData.category,

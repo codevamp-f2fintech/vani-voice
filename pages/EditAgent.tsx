@@ -50,15 +50,36 @@ const EditAgent: React.FC = () => {
             // Load configuration if available
             if (agent.configuration) {
                 const config = agent.configuration;
-                setSelectedVoiceId(config.voice?.voiceId || '');
-                setLlmModel(config.model?.model || 'gpt-4o');
-                setTemperature(config.model?.temperature ?? 0.7);
-                setFirstMessage(config.firstMessage || '');
-                setSystemPrompt(config.model?.systemPrompt || '');
+                // Handle nested conversation_config structure
+                if (config.conversation_config) {
+                    const convConfig = config.conversation_config;
+                    setSelectedVoiceId(convConfig.tts?.voice_id || '');
+                    setFirstMessage(convConfig.agent?.first_message || '');
+                    setSystemPrompt(convConfig.agent?.prompt?.prompt || '');
+
+                    // Try to extract language
+                    if (convConfig.agent?.language) {
+                        const langMap: Record<string, string> = {
+                            'en': 'English (Indian Accent)',
+                            'hi': 'Hindi',
+                            'hi-Latn': 'Hinglish (Mixed)'
+                        };
+                        // Reverse lookup or default
+                        const foundLang = Object.entries(langMap).find(([k]) => k === convConfig.agent?.language)?.[1];
+                        if (foundLang) setLanguage(foundLang);
+                    }
+                } else {
+                    // Fallback for legacy/flat structure if any
+                    setSelectedVoiceId(config.voice?.voiceId || '');
+                    setLlmModel(config.model?.model || 'gpt-4o');
+                    setTemperature(config.model?.temperature ?? 0.7);
+                    setFirstMessage(config.firstMessage || '');
+                    setSystemPrompt(config.model?.systemPrompt || '');
+                }
             }
 
-            // Extract language from tags
-            if (agent.metadata?.tags?.length) {
+            // Extract language from tags if not found in config
+            if (agent.metadata?.tags?.length && !agent.configuration?.conversation_config?.agent?.language) {
                 const langTag = agent.metadata.tags[0];
                 setLanguage(langTag.charAt(0).toUpperCase() + langTag.slice(1));
             }
@@ -93,20 +114,41 @@ const EditAgent: React.FC = () => {
         try {
             setSaving(true);
 
+            // Map UI language to API language code
+            let langCode = 'en';
+            if (language === 'Hindi') langCode = 'hi';
+            if (language?.includes('Hinglish')) langCode = 'hi-Latn';
+
+            // Construct ElevenLabs configuration
+            const agentConfiguration = {
+                conversation_config: {
+                    agent: {
+                        prompt: {
+                            prompt: systemPrompt || 'You are a helpful assistant.'
+                        },
+                        first_message: firstMessage || 'Hello!',
+                        language: langCode
+                    },
+                    tts: {
+                        voice_id: selectedVoiceId || '21m00Tcm4TlvDq8ikWAM', // Default voice if none selected
+                        model_id: 'eleven_multilingual_v3',
+                        optimize_streaming_latency: 3,
+                        output_format: 'pcm_16000'
+                    },
+                    asr: {
+                        quality: 'high',
+                        user_input_audio_format: 'pcm_16000'
+                    }
+                },
+                platform_settings: {
+                    platform: 'web'
+                }
+            };
+
             const updates = {
                 name: agentName,
                 status,
-                voice: selectedVoiceId ? {
-                    voiceId: selectedVoiceId,
-                    provider: voices.find(v => v.voiceId === selectedVoiceId)?.provider || 'deepgram'
-                } : undefined,
-                model: {
-                    provider: 'openai',
-                    model: llmModel,
-                    temperature,
-                    systemPrompt
-                },
-                firstMessage,
+                configuration: agentConfiguration, // Use the correct structure
                 metadata: {
                     description: goal,
                     category: 'general',
