@@ -13,7 +13,7 @@ import {
     Car,
     GraduationCap,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const agents = [
     {
@@ -64,14 +64,24 @@ export default function VoiceAgent() {
     const [activeAgent, setActiveAgent] = useState(agents[0]);
     const [hasPermission, setHasPermission] = useState(false);
     const [userName, setUserName] = useState("");
+    const [isMuted, setIsMuted] = useState(false);
 
     const conversation = useConversation({
         onConnect: () => console.log(`Connected to ${activeAgent.name}`),
-        onDisconnect: () => console.log(`Disconnected from ${activeAgent.name}`),
+        onDisconnect: () => {
+            console.log(`Disconnected from ${activeAgent.name}`);
+            setIsMuted(false);
+        },
         onMessage: (message) => console.log("Message:", message),
         onError: (error) => console.error("Error:", error),
         onModeChange: (mode) => console.log("Mode changed:", mode),
+        // @ts-ignore - micMuted might be available in newer versions
+        micMuted: isMuted,
     });
+
+    useEffect(() => {
+        console.log("Conversation Object:", conversation);
+    }, [conversation]);
 
     const startConversation = async () => {
         try {
@@ -103,6 +113,21 @@ export default function VoiceAgent() {
     const stopConversation = () => {
         conversation.endSession();
         setHasPermission(false);
+        setIsMuted(false);
+    };
+
+    const toggleMute = async () => {
+        const newMuted = !isMuted;
+        setIsMuted(newMuted);
+
+        // Attempt to mute using SDK
+        // @ts-ignore
+        if (conversation.setMicMuted) {
+            // @ts-ignore
+            conversation.setMicMuted(newMuted);
+        } else {
+            console.log("conversation.setMicMuted not available, relying on micMuted prop");
+        }
     };
 
     const isConnected = conversation.status === "connected";
@@ -235,13 +260,24 @@ export default function VoiceAgent() {
                                     <span>{isConnecting ? "Connecting..." : "Start Call"}</span>
                                 </button>
                             ) : (
-                                <button
-                                    onClick={stopConversation}
-                                    className="px-8 py-4 bg-red-600 rounded-full text-white font-semibold text-lg hover:bg-red-700 transition-colors flex items-center space-x-2 shadow-lg hover:shadow-red-900/20"
-                                >
-                                    <PhoneOff className="w-5 h-5" />
-                                    <span>End Call</span>
-                                </button>
+                                <div className="flex gap-4">
+                                    <button
+                                        onClick={toggleMute}
+                                        className={`px-6 py-4 rounded-full font-semibold text-lg transition-colors flex items-center space-x-2 shadow-lg ${isMuted
+                                            ? "bg-gray-600 text-white hover:bg-gray-700"
+                                            : "bg-white text-gray-900 hover:bg-gray-100"
+                                            }`}
+                                    >
+                                        {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                                    </button>
+                                    <button
+                                        onClick={stopConversation}
+                                        className="px-8 py-4 bg-red-600 rounded-full text-white font-semibold text-lg hover:bg-red-700 transition-colors flex items-center space-x-2 shadow-lg hover:shadow-red-900/20"
+                                    >
+                                        <PhoneOff className="w-5 h-5" />
+                                        <span>End Call</span>
+                                    </button>
+                                </div>
                             )}
                         </div>
                     </div>
