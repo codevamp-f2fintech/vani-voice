@@ -79,9 +79,18 @@ const LandingPage: React.FC<LandingPageProps> = ({ theme, toggleTheme }) => {
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[800px] bg-gradient-to-b from-vani-blue/20 via-vani-pink/10 to-transparent blur-[120px] -z-10" />
 
         <div className="max-w-6xl mx-auto text-center space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-vani-plum/10 text-vani-plum dark:text-vani-pink text-xs font-bold border border-vani-plum/20">
-            <Rocket size={14} className="animate-pulse" />
-            Vani 2.0: Now with 12+ Regional Indian Languages
+          <div className="flex flex-col items-center gap-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-orange-100 text-orange-700 text-[10px] font-bold uppercase tracking-wider shadow-sm">
+              <span className="w-2 h-2 rounded-full bg-[#FF9933]"></span>
+              <span className="w-2 h-2 rounded-full bg-white border border-gray-200"></span>
+              <span className="w-2 h-2 rounded-full bg-[#138808]"></span>
+              Made in India 🇮🇳
+            </div>
+
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-vani-plum/10 text-vani-plum dark:text-vani-pink text-xs font-bold border border-vani-plum/20">
+              <Rocket size={14} className="animate-pulse" />
+              Vani 2.0: Now with 12+ Regional Indian Languages
+            </div>
           </div>
 
           <h1 className="text-6xl md:text-9xl font-black tracking-tighter dark:text-white leading-[0.9] text-balance">
@@ -169,7 +178,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ theme, toggleTheme }) => {
             <p className="text-base text-gray-500 dark:text-gray-400 font-medium">
               <span className="bg-vani-plum/10 dark:bg-vani-plum/20 px-2 py-1 rounded text-vani-plum dark:text-vani-pink font-bold">Building the future of voice interactions for Bharat.</span>
             </p>
-            <p className="text-xs text-gray-400 font-medium pt-4">© 2024 Vani Voice AI. All rights reserved.</p>
+            <p className="text-xs text-gray-400 font-medium pt-4">© 2024 Vani Voice AI. Built with ❤️ in India 🇮🇳</p>
           </div>
 
           <div>
