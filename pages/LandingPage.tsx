@@ -2,17 +2,17 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button, Card } from '../components/UI';
-import { 
-  Mic2, 
-  Zap, 
-  Languages, 
-  PieChart, 
-  ArrowRight, 
-  Stethoscope, 
-  Building2, 
-  Briefcase, 
-  Hotel, 
-  Headphones, 
+import {
+  Mic2,
+  Zap,
+  Languages,
+  PieChart,
+  ArrowRight,
+  Stethoscope,
+  Building2,
+  Briefcase,
+  Hotel,
+  Headphones,
   Landmark,
   Sun,
   Moon,
@@ -20,6 +20,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { AppTheme } from '../types';
+import VoiceAgent from '@/components/VoiceAgent';
 
 interface LandingPageProps {
   theme?: AppTheme;
@@ -60,7 +61,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ theme, toggleTheme }) => {
           <a href="#" className="hover:text-vani-plum transition-colors">Docs</a>
         </div>
         <div className="flex items-center gap-4">
-          <button 
+          <button
             onClick={toggleTheme}
             className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-white/5 transition-colors"
           >
@@ -76,22 +77,22 @@ const LandingPage: React.FC<LandingPageProps> = ({ theme, toggleTheme }) => {
       {/* Hero Section */}
       <section className="relative pt-40 pb-20 px-6 overflow-hidden">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-[800px] bg-gradient-to-b from-vani-blue/20 via-vani-pink/10 to-transparent blur-[120px] -z-10" />
-        
+
         <div className="max-w-6xl mx-auto text-center space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-1000">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-vani-plum/10 text-vani-plum dark:text-vani-pink text-xs font-bold border border-vani-plum/20">
             <Rocket size={14} className="animate-pulse" />
             Vani 2.0: Now with 12+ Regional Indian Languages
           </div>
-          
+
           <h1 className="text-6xl md:text-9xl font-black tracking-tighter dark:text-white leading-[0.9] text-balance">
             Build <span className="gradient-text">Human-Like</span> Voice AI Agents in Minutes
           </h1>
-          
+
           <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-400 max-w-3xl mx-auto leading-relaxed font-medium">
             The only enterprise-grade platform built specifically for the Indian accent and culture.
             Deploy AI agents for support, sales, and collections starting at <span className="text-gray-900 dark:text-white font-bold underline decoration-vani-plum underline-offset-4">₹5/min</span>.
           </p>
-          
+
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4">
             <Link to="/signup">
               <Button size="lg" className="w-full sm:w-auto h-16 px-10 text-lg shadow-2xl">
@@ -107,6 +108,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ theme, toggleTheme }) => {
         </div>
       </section>
 
+      <VoiceAgent />
+
       {/* Features Section */}
       <section id="features" className="py-32 px-6 bg-white dark:bg-[#080809] border-y border-gray-100 dark:border-white/5">
         <div className="max-w-7xl mx-auto">
@@ -114,7 +117,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ theme, toggleTheme }) => {
             <h2 className="text-4xl md:text-6xl font-black dark:text-white tracking-tight">Enterprise-Ready <span className="gradient-text">Features</span></h2>
             <p className="text-gray-600 dark:text-gray-400 text-lg">Everything you need to automate your voice interactions at scale.</p>
           </div>
-          
+
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((f, i) => (
               <Card key={i} className="p-10 group hover:-translate-y-2 duration-300 bg-gray-50/50 dark:bg-white/5">
@@ -168,7 +171,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ theme, toggleTheme }) => {
             </p>
             <p className="text-xs text-gray-400 font-medium pt-4">© 2024 Vani Voice AI. All rights reserved.</p>
           </div>
-          
+
           <div>
             <h4 className="font-bold text-gray-900 dark:text-white mb-6 uppercase tracking-widest text-xs">Platform</h4>
             <ul className="space-y-4 text-sm font-medium text-gray-600 dark:text-gray-400">
