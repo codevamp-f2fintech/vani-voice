@@ -100,11 +100,13 @@ export interface VoiceListResponse {
 export interface KnowledgeFile {
     id: string;
     name: string;
-    originalName: string;
+    originalName?: string;
+    text?: string;        // Extracted plain text content (used for Gemini injection)
+    s3Url?: string;       // S3 archive URL of the original file
     status: string;
-    bytes: number;
-    mimetype: string;
-    createdAt: string;
+    bytes?: number;
+    mimetype?: string;
+    createdAt?: string;
 }
 
 export interface FileListResponse {

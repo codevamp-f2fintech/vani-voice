@@ -73,8 +73,15 @@ export const api = {
         formData.append('file', file);
 
         const url = `${API_BASE_URL}${endpoint}`;
+        const token = getAuthToken();
+        const headers: HeadersInit = {};
+        if (token) {
+            (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+        }
+
         const res = await fetch(url, {
             method: 'POST',
+            headers,
             body: formData,
         });
 

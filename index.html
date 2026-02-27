@@ -48,6 +48,30 @@
       .wave-bar {
         animation: wave 1s ease-in-out infinite;
       }
+
+      /* ─── Dark Mode: Native Select & Option Fix ─────────────────────────────
+         Tailwind classes on <select> cannot style the browser-native dropdown
+         popup or <option> elements — those always paint with OS defaults.
+         This global rule forces correct colours for ALL selects in dark mode. */
+      .dark select {
+        background-color: #1a1a1f;
+        color: #ffffff;
+        border-color: rgba(255,255,255,0.1);
+      }
+      .dark select option {
+        background-color: #1a1a1f;
+        color: #ffffff;
+      }
+      /* Also fix date inputs which have the same native-rendering issue */
+      .dark input[type="date"] {
+        color-scheme: dark;
+        color: #ffffff;
+      }
+      /* Focused select ring in dark mode */
+      .dark select:focus {
+        outline: 2px solid rgba(181, 23, 158, 0.5);
+        outline-offset: 1px;
+      }
     </style>
   <script type="importmap">
 {

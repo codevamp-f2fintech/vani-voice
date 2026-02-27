@@ -185,7 +185,7 @@ const CallDetails: React.FC = () => {
                         </div>
                         <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
                             <span className="text-sm text-gray-500 font-medium">Status</span>
-                            <Badge variant={call.status === 'ended' ? 'success' : 'warning'}>{call.status || 'Unknown'}</Badge>
+                            <Badge variant={['ended', 'completed'].includes(call.status || '') ? 'success' : 'warning'}>{call.status || 'Unknown'}</Badge>
                         </div>
                         <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10">
                             <span className="text-sm text-gray-500 font-medium">Start</span>

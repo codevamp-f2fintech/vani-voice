@@ -20,6 +20,7 @@ import { API_BASE_URL } from '../lib/config';
 
 type QueueResult = {
     to: string;
+    name?: string;
     ok: boolean;
     id?: string;
     error?: string
@@ -38,14 +39,28 @@ const BulkCall: React.FC = () => {
     const { agents, loading: agentsLoading } = useAgents();
     const activeAgents = agents.filter(a => a.status === 'active');
 
-    // Parse and validate numbers
+    // Parse and validate numbers (supports phone,name CSV format)
     const parsed = useMemo(() => {
-        const list = parseNumbersFromCSV(text);
-        const deduped = Array.from(new Set(list));
-        const withValidity = deduped.map(n => ({ to: n, valid: validateE164(n) }));
-        const valid = withValidity.filter(x => x.valid).map(x => x.to);
-        const invalid = withValidity.filter(x => !x.valid).map(x => x.to);
-        return { countRaw: list.length, countUnique: deduped.length, valid, invalid };
+        const lines = text.split(/[\n;]/g).map(s => s.trim()).filter(Boolean);
+        const entries: { to: string; name: string }[] = [];
+        for (const line of lines) {
+            const parts = line.split(',').map(p => p.trim());
+            // First part is always phone, second (optional) is name
+            const phone = parts[0];
+            const name = parts[1] || '';
+            if (phone) entries.push({ to: phone, name });
+        }
+        // Deduplicate by phone number
+        const seen = new Set<string>();
+        const deduped = entries.filter(e => {
+            if (seen.has(e.to)) return false;
+            seen.add(e.to);
+            return true;
+        });
+        const withValidity = deduped.map(e => ({ ...e, valid: validateE164(e.to) }));
+        const valid = withValidity.filter(x => x.valid);
+        const invalid = withValidity.filter(x => !x.valid);
+        return { countRaw: entries.length, countUnique: deduped.length, valid, invalid };
     }, [text]);
 
     const progress = useMemo(() => {
@@ -84,9 +99,13 @@ const BulkCall: React.FC = () => {
                 if (controller.signal.aborted) return;
                 const i = idx++;
                 if (i >= queue.length) return;
-                const to = queue[i];
+                const { to, name } = queue[i];
 
                 try {
+                    // Build body with optional variables
+                    const body: any = { to, agentId: selectedAgentId };
+                    if (name) body.variables = { name };
+
                     // Use independent call API
                     const res = await fetch(`${API_BASE_URL}/api/independent-calls/outbound`, {
                         method: 'POST',
@@ -94,23 +113,21 @@ const BulkCall: React.FC = () => {
                             'Content-Type': 'application/json',
                             'Authorization': `Bearer ${localStorage.getItem('token')}`
                         },
-                        body: JSON.stringify({
-                            to,
-                            agentId: selectedAgentId
-                        }),
+                        body: JSON.stringify(body),
                         signal: controller.signal,
                     });
                     const data = await res.json().catch(() => ({}));
                     const ok = res.ok;
                     setResults(prev => [...prev, {
                         to,
+                        name,
                         ok,
                         id: data?.call?.sid || data?.call?.id,
                         error: ok ? undefined : data?.error || data?.message || 'Failed'
                     }]);
                 } catch (e: any) {
                     if (controller.signal.aborted) return;
-                    setResults(prev => [...prev, { to, ok: false, error: e?.message || 'Error' }]);
+                    setResults(prev => [...prev, { to, name, ok: false, error: e?.message || 'Error' }]);
                 }
             }
         }
@@ -175,7 +192,9 @@ const BulkCall: React.FC = () => {
                                 />
                                 <Upload size={32} className="mx-auto text-gray-400 mb-3" />
                                 <p className="text-sm font-medium dark:text-white">Click to upload CSV</p>
-                                <p className="text-xs text-gray-500 mt-1">Columns can be in any order</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Format: <code className="bg-gray-100 dark:bg-white/10 px-1 rounded text-vani-plum">phone,name</code> per row (name column is optional)
+                                </p>
                             </div>
                         </div>
                     </Card>
@@ -193,7 +212,7 @@ const BulkCall: React.FC = () => {
                                 placeholder="+91XXXXXXXXXX, +91XXXXXXXXXX..."
                                 className="w-full h-40 px-4 py-3 bg-gray-50 dark:bg-white/5 border-2 border-gray-100 dark:border-white/10 rounded-xl text-sm font-mono dark:text-white outline-none focus:border-vani-plum resize-none"
                             />
-                            <p className="text-xs text-gray-500">Separate with commas, semicolons, or newlines.</p>
+                            <p className="text-xs text-gray-500">Separate with semicolons or newlines. Format: <code className="bg-gray-100 dark:bg-white/10 px-1 rounded text-vani-plum">phone,name</code> (name is optional)</p>
                         </div>
                     </Card>
 
@@ -351,6 +370,7 @@ const BulkCall: React.FC = () => {
                                     <thead className="bg-gray-50 dark:bg-white/5 sticky top-0">
                                         <tr>
                                             <th className="px-4 py-3 text-left font-bold text-gray-500">Phone</th>
+                                            <th className="px-4 py-3 text-left font-bold text-gray-500">Name</th>
                                             <th className="px-4 py-3 text-left font-bold text-gray-500">Status</th>
                                             <th className="px-4 py-3 text-left font-bold text-gray-500">Call ID</th>
                                             <th className="px-4 py-3 text-left font-bold text-gray-500">Error</th>
@@ -360,6 +380,7 @@ const BulkCall: React.FC = () => {
                                         {results.map((r, i) => (
                                             <tr key={`${r.to}-${i}`}>
                                                 <td className="px-4 py-3 font-mono">{r.to}</td>
+                                                <td className="px-4 py-3 text-sm">{r.name || '—'}</td>
                                                 <td className="px-4 py-3">
                                                     {r.ok ? (
                                                         <Badge variant="success">Queued</Badge>

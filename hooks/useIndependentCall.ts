@@ -30,14 +30,19 @@ export function useIndependentCall() {
     /**
      * Make an outbound call using independent voice pipeline
      */
-    const makeCall = useCallback(async (to: string, agentId: string) => {
+    const makeCall = useCallback(async (to: string, agentId: string, variables?: Record<string, string>) => {
         try {
             setCalling(true);
             setError(null);
 
+            const body: any = { to, agentId };
+            if (variables && Object.keys(variables).length > 0) {
+                body.variables = variables;
+            }
+
             const response = await api.post<IndependentCallResponse>(
                 '/api/independent-calls/outbound',
-                { to, agentId }
+                body
             );
 
             if (response.success) {

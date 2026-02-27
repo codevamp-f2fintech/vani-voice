@@ -20,6 +20,7 @@ const TestCall: React.FC = () => {
 
     const [phoneNumber, setPhoneNumber] = useState('+91');
     const [selectedAgentId, setSelectedAgentId] = useState(preselectedAgentId || '');
+    const [variableName, setVariableName] = useState('');
     const [callResult, setCallResult] = useState<any>(null);
 
     const { agents, loading: agentsLoading } = useAgents();
@@ -42,7 +43,9 @@ const TestCall: React.FC = () => {
         }
 
         try {
-            const result = await makeCall(cleanPhone, selectedAgentId);
+            // Build variables object if name is provided
+            const variables = variableName.trim() ? { name: variableName.trim() } : undefined;
+            const result = await makeCall(cleanPhone, selectedAgentId, variables);
             setCallResult(result);
         } catch (err: any) {
             // Error handled by hook
@@ -85,6 +88,25 @@ const TestCall: React.FC = () => {
                         />
                         <p className="text-xs text-gray-500">
                             Use E.164 format. Example: +918267818161
+                        </p>
+                    </div>
+
+                    {/* Variable (Name) */}
+                    <div className="space-y-3">
+                        <Label className="flex items-center gap-2 text-base">
+                            <Zap size={18} className="text-vani-plum" />
+                            Name Variable
+                            <span className="text-xs text-gray-400 font-normal">(optional)</span>
+                        </Label>
+                        <Input
+                            type="text"
+                            placeholder="e.g. Talha"
+                            value={variableName}
+                            onChange={(e) => setVariableName(e.target.value)}
+                            className="h-14 text-lg font-medium"
+                        />
+                        <p className="text-xs text-gray-500">
+                            Use <code className="bg-gray-100 dark:bg-white/10 px-1 rounded text-vani-plum">{'{{name}}'}</code> in your agent's first message. This value will replace it at call time.
                         </p>
                     </div>
 

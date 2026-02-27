@@ -28,6 +28,8 @@ import VoiceSelect from '../components/VoiceSelect';
 interface UploadedFile {
   id: string;
   name: string;
+  text: string;         // Extracted plain text used for Gemini injection
+  s3Url?: string;       // S3 archive URL (optional)
   status: string;
   bytes?: number;
 }
@@ -205,6 +207,18 @@ const CreateAgentWizard: React.FC = () => {
       }));
       console.log('[CreateAgentWizard] Loaded phoneNumberId from agent:', existingAgent.phoneNumberId);
 
+      // Pre-populate KB files from saved agent config
+      if (config.knowledgeBase && Array.isArray(config.knowledgeBase) && config.knowledgeBase.length > 0) {
+        setUploadedFiles(config.knowledgeBase.map((f: any) => ({
+          id: f.id,
+          name: f.name,
+          text: f.text || '',
+          s3Url: f.s3Url,
+          status: 'uploaded',
+          bytes: f.bytes
+        })));
+      }
+
       setDataLoaded(true);
     }
   }, [existingAgent, isEditMode, dataLoaded, location.state]);
@@ -224,7 +238,9 @@ const CreateAgentWizard: React.FC = () => {
         setUploadedFiles(prev => [...prev, {
           id: result.file.id,
           name: result.file.name || file.name,
-          status: result.file.status || 'uploaded',
+          text: result.file.text || '',      // extracted text for Gemini
+          s3Url: result.file.s3Url,          // S3 archive URL
+          status: result.file.status || 'processed',
           bytes: result.file.bytes
         }]);
       }
@@ -286,12 +302,14 @@ const CreateAgentWizard: React.FC = () => {
         responseDelaySeconds: parseFloat(formData.responseDelaySeconds as any),
       };
 
-      // Add knowledge base if files uploaded
+      // Add knowledge base if files uploaded (store full text for Gemini injection)
       if (uploadedFiles.length > 0) {
-        vapiConfig.model.knowledgeBase = {
-          provider: 'google',
-          fileIds: uploadedFiles.map(f => f.id)
-        };
+        vapiConfig.knowledgeBase = uploadedFiles.map(f => ({
+          id: f.id,
+          name: f.name,
+          text: f.text,
+          s3Url: f.s3Url
+        }));
       }
 
       let result;
@@ -586,7 +604,6 @@ const CreateAgentWizard: React.FC = () => {
                   <option value="eleven_multilingual_v2">Eleven Multilingual v2</option>
                   <option value="eleven_flash_v2_5">Eleven Flash v2.5</option>
                   <option value="eleven_v3">Eleven V3 (Most Expressive)</option>
-                  <option value="eleven_ttv_v3">Eleven V3 Conversational (Best for Calls)</option>
                   <option value="eleven_monolingual_v1">Eleven Monolingual v1</option>
                 </select>
                 {['eleven_v3', 'eleven_ttv_v3'].includes(formData.voiceModel) && (
