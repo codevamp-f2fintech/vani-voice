@@ -17,42 +17,42 @@ import { useState, useEffect } from "react";
 
 const agents = [
     {
-        id: "agent_6401khqxq8g4e8ys17c93vffm3p8", // Replace with actual Agent ID
+        id: "agent_9001kbc7zs0rf1camvhwkxxxmqxp", // Replace with actual Agent ID
         name: "Loan Support",
         icon: Banknote,
         description: "Expert assistance for personal and business loans.",
         gradient: "from-blue-500 to-cyan-500",
     },
     {
-        id: "agent_5501khqxq0qbfew9hwyte8tr809q", // Replace with actual Agent ID
+        id: "agent_5101khn9k6j5enpvzx0c51dfb197", // Replace with actual Agent ID
         name: "Real Estate",
         icon: Building,
         description: "Find your dream home or investment property.",
         gradient: "from-emerald-500 to-teal-500",
     },
     {
-        id: "agent_9001khqxng4dec7stgyppaqmjmd6", // Replace with actual Agent ID
+        id: "agent_3401khn9mmrpfpv8smgyt3zcs70n", // Replace with actual Agent ID
         name: "Doctor Appt",
         icon: Stethoscope,
         description: "Schedule consultations with top specialists.",
         gradient: "from-red-500 to-pink-500",
     },
     {
-        id: "agent_2401khqxn4mwec88f5ad027hf2nc", // Replace with actual Agent ID
+        id: "agent_0801khn9nbyge6jvwky5sgqv1waw", // Replace with actual Agent ID
         name: "Hotel Reception",
         icon: Hotel,
         description: "Book rooms and manage your stay details.",
         gradient: "from-amber-500 to-orange-500",
     },
     {
-        id: "agent_7701khqxmwsnec79xyxdt98rwmdn", // Replace with actual Agent ID
+        id: "agent_6001khn9p9g6fb5tbhn9eycxz2xj", // Replace with actual Agent ID
         name: "Taxi Booking",
         icon: Car,
         description: "Reliable rides for your daily commute.",
         gradient: "from-violet-500 to-purple-500",
     },
     {
-        id: "agent_7401khqxmjepes288df85t7vf9c4", // Replace with actual Agent ID
+        id: "agent_3701khqr590qf6zbb1dg1vj3yqjk", // Replace with actual Agent ID
         name: "College Admission",
         icon: GraduationCap,
         description: "Guidance on courses, admissions, and campus life.",
