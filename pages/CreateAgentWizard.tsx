@@ -24,6 +24,7 @@ import { createAgent, updateAgent, useAgent } from '../hooks/useAgents';
 import { uploadFile } from '../hooks/useFiles';
 import { usePhoneNumbers } from '../hooks/usePhoneNumbers';
 import VoiceSelect from '../components/VoiceSelect';
+import { api } from '../lib/api';
 
 interface UploadedFile {
   id: string;
@@ -55,6 +56,12 @@ const CreateAgentWizard: React.FC = () => {
   const [addVoiceManually, setAddVoiceManually] = useState(false);
   const [manualVoiceId, setManualVoiceId] = useState('');
 
+  // Chatterbox voices state
+  const [chatterboxVoices, setChatterboxVoices] = useState<{ voiceId: string; name: string; language?: string | null; variant?: string }[]>([]);
+  const [chatterboxVoicesLoading, setChatterboxVoicesLoading] = useState(false);
+  const [chatterboxVoicesError, setChatterboxVoicesError] = useState<string | null>(null);
+  const [chatterboxServerUrl, setChatterboxServerUrl] = useState<string>('');
+
   // Form state - comprehensive configuration
   const [formData, setFormData] = useState({
     // Basic
@@ -81,6 +88,11 @@ const CreateAgentWizard: React.FC = () => {
     voiceSpeed: 0.85, // 0.5-2.0, lower = slower
     hinglish: false, // Hinglish mode for Hindi+English mixed speech
 
+    // Chatterbox-specific
+    chatterboxVoice: 'default',        // Named voice clone on Chatterbox server
+    chatterboxExaggeration: 0.7,       // Emotion exaggeration (0-2)
+    chatterboxCfgWeight: 0.5,          // Guidance weight (0-1)
+
     // Transcriber configuration
     transcriberProvider: 'deepgram',
     transcriberModel: 'nova-2',
@@ -101,6 +113,23 @@ const CreateAgentWizard: React.FC = () => {
 
   // Fetch voices
   const { voices, loading: voicesLoading } = useVoices();
+
+  // Fetch Chatterbox voices whenever provider switches to 'chatterbox'
+  useEffect(() => {
+    if (formData.voiceProvider !== 'chatterbox') return;
+    setChatterboxVoicesLoading(true);
+    setChatterboxVoicesError(null);
+    api.get<any>('/vapi/voices/chatterbox')
+      .then((data) => {
+        setChatterboxVoices(data.voices || []);
+        setChatterboxServerUrl(data.serverUrl || '');
+      })
+      .catch((err: any) => {
+        setChatterboxVoicesError(err.message || 'Could not reach Chatterbox server');
+        setChatterboxVoices([]);
+      })
+      .finally(() => setChatterboxVoicesLoading(false));
+  }, [formData.voiceProvider]);
 
   // Fetch phone numbers
   const { phoneNumbers } = usePhoneNumbers();
@@ -188,6 +217,11 @@ const CreateAgentWizard: React.FC = () => {
         voiceSpeed: config.voice?.speed ?? 0.85,
         hinglish: config.voice?.hinglish ?? false,
 
+        // Chatterbox
+        chatterboxVoice: config.voice?.voice || 'default',
+        chatterboxExaggeration: config.voice?.exaggeration ?? 0.7,
+        chatterboxCfgWeight: config.voice?.cfg_weight ?? 0.5,
+
         // Transcriber
         transcriberProvider: config.transcriber?.provider || 'deepgram',
         transcriberModel: config.transcriber?.model || 'nova-2',
@@ -267,17 +301,18 @@ const CreateAgentWizard: React.FC = () => {
     try {
       setSaving(true);
 
-      // Build VAPI configuration
-      const vapiConfig: any = {
-        name: formData.name,
-        model: {
-          provider: formData.modelProvider,
-          model: formData.modelName,
-          messages: [{ role: 'system', content: formData.systemPrompt }],
-          temperature: parseFloat(formData.temperature as any),
-          maxTokens: parseInt(formData.maxTokens as any),
-        },
-        voice: finalVoiceId ? {
+      // Build voice config based on selected provider
+      let voiceConfig: any;
+      if (formData.voiceProvider === 'chatterbox') {
+        voiceConfig = {
+          provider: 'chatterbox',
+          voice: formData.chatterboxVoice || 'default',
+          exaggeration: formData.chatterboxExaggeration,
+          cfg_weight: formData.chatterboxCfgWeight,
+          language: formData.language,
+        };
+      } else if (finalVoiceId) {
+        voiceConfig = {
           provider: formData.voiceProvider,
           voiceId: finalVoiceId,
           model: formData.voiceModel,
@@ -289,7 +324,22 @@ const CreateAgentWizard: React.FC = () => {
           } : {}),
           hinglish: formData.hinglish,
           language: formData.language,
-        } : undefined,
+        };
+      } else {
+        voiceConfig = undefined;
+      }
+
+      // Build VAPI configuration
+      const vapiConfig: any = {
+        name: formData.name,
+        model: {
+          provider: formData.modelProvider,
+          model: formData.modelName,
+          messages: [{ role: 'system', content: formData.systemPrompt }],
+          temperature: parseFloat(formData.temperature as any),
+          maxTokens: parseInt(formData.maxTokens as any),
+        },
+        voice: voiceConfig, // Use the dynamically built voiceConfig
         transcriber: {
           provider: formData.transcriberProvider,
           model: formData.transcriberModel,
@@ -587,98 +637,224 @@ const CreateAgentWizard: React.FC = () => {
                   className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
                 >
                   <option value="11labs">ElevenLabs</option>
+                  <option value="chatterbox">Chatterbox (Self-hosted)</option>
                   <option value="azure">Azure</option>
                   <option value="playht">PlayHT</option>
                   <option value="deepgram">Deepgram</option>
                 </select>
               </div>
-              <div className="space-y-2">
-                <Label>Voice Model</Label>
-                <select
-                  value={formData.voiceModel}
-                  onChange={(e) => handleChange('voiceModel', e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
-                >
-                  <option value="eleven_turbo_v2_5">Eleven Turbo v2.5</option>
-                  <option value="eleven_turbo_v2">Eleven Turbo v2</option>
-                  <option value="eleven_multilingual_v2">Eleven Multilingual v2</option>
-                  <option value="eleven_flash_v2_5">Eleven Flash v2.5</option>
-                  <option value="eleven_v3">Eleven V3 (Most Expressive)</option>
-                  <option value="eleven_monolingual_v1">Eleven Monolingual v1</option>
-                </select>
-                {['eleven_v3', 'eleven_ttv_v3'].includes(formData.voiceModel) && (
-                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                    ✨ V3 model selected — expressive mode enabled, voice settings (stability, speed) are auto-managed.
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Hinglish Toggle */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10">
-              <div>
-                <p className="text-sm font-medium dark:text-white">Hinglish Mode</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  Enable Hindi + English mixed speech. Enforces Hindi language pronunciation for the TTS model.
-                </p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.hinglish}
-                  onChange={(e) => handleChange('hinglish', e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-vani-plum/20 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-vani-plum"></div>
-              </label>
-            </div>
-
-            {/* Voice Selection */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label>Voice Selection</Label>
-                <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={addVoiceManually}
-                    onChange={(e) => {
-                      setAddVoiceManually(e.target.checked);
-                      if (!e.target.checked) setManualVoiceId('');
-                    }}
-                    className="accent-vani-plum"
-                  />
-                  Add Voice ID Manually
-                </label>
-              </div>
-
-              {addVoiceManually ? (
+              {/* Voice Model — only relevant for ElevenLabs */}
+              {formData.voiceProvider !== 'chatterbox' && (
                 <div className="space-y-2">
-                  <Input
-                    value={manualVoiceId}
-                    onChange={(e) => setManualVoiceId(e.target.value)}
-                    placeholder="Enter ElevenLabs Voice ID"
-                    className="h-12"
-                  />
-                  <p className="text-xs text-gray-500">
-                    Enter the Voice ID from your ElevenLabs account
-                  </p>
+                  <Label>Voice Model</Label>
+                  <select
+                    value={formData.voiceModel}
+                    onChange={(e) => handleChange('voiceModel', e.target.value)}
+                    className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
+                  >
+                    <option value="eleven_turbo_v2_5">Eleven Turbo v2.5</option>
+                    <option value="eleven_turbo_v2">Eleven Turbo v2</option>
+                    <option value="eleven_multilingual_v2">Eleven Multilingual v2</option>
+                    <option value="eleven_flash_v2_5">Eleven Flash v2.5</option>
+                    <option value="eleven_v3">Eleven V3 (Most Expressive)</option>
+                    <option value="eleven_monolingual_v1">Eleven Monolingual v1</option>
+                  </select>
+                  {['eleven_v3', 'eleven_ttv_v3'].includes(formData.voiceModel) && (
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                      ✨ V3 model selected — expressive mode enabled, voice settings (stability, speed) are auto-managed.
+                    </p>
+                  )}
                 </div>
-              ) : voicesLoading ? (
-                <div className="flex items-center gap-2 h-12 px-4 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-gray-500">
-                  <Loader2 size={16} className="animate-spin" />
-                  Loading voices...
-                </div>
-              ) : (
-                <VoiceSelect
-                  voices={voices}
-                  selectedVoiceId={formData.voiceId}
-                  onSelect={(voiceId) => handleChange('voiceId', voiceId)}
-                />
               )}
             </div>
 
-            {/* Voice Speed Control - Only for non-V3 models */}
-            {!['eleven_v3', 'eleven_ttv_v3'].includes(formData.voiceModel) && (
+            {/* Hinglish Toggle — ElevenLabs only */}
+            {formData.voiceProvider !== 'chatterbox' && (
+              <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10">
+                <div>
+                  <p className="text-sm font-medium dark:text-white">Hinglish Mode</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    Enable Hindi + English mixed speech. Enforces Hindi language pronunciation for the TTS model.
+                  </p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.hinglish}
+                    onChange={(e) => handleChange('hinglish', e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-vani-plum/20 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-vani-plum"></div>
+                </label>
+              </div>
+            )}
+
+            {/* ── Chatterbox-specific controls ── */}
+            {formData.voiceProvider === 'chatterbox' && (
+              <div className="space-y-5 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+                <div className="flex items-start gap-2">
+                  <span className="text-blue-500 mt-0.5">ℹ️</span>
+                  <div>
+                    <p className="text-sm font-semibold text-blue-800 dark:text-blue-200">Chatterbox — Self-hosted TTS</p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
+                      Powered by <a href="https://github.com/travisvn/chatterbox-tts-api" target="_blank" rel="noreferrer" className="underline">chatterbox-tts-api</a>.
+                      Set <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">CHATTERBOX_BASE_URL</code> in your server's <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">.env</code>.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Voice */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Voice</Label>
+                    {chatterboxServerUrl && (
+                      <span className="text-[10px] text-blue-500 truncate max-w-[200px]">{chatterboxServerUrl}</span>
+                    )}
+                  </div>
+
+                  {chatterboxVoicesLoading ? (
+                    <div className="flex items-center gap-2 h-12 px-4 bg-white dark:bg-white/10 border border-blue-200 dark:border-blue-700 rounded-xl text-gray-500 text-sm">
+                      <Loader2 size={15} className="animate-spin text-blue-500" />
+                      Fetching voices from Chatterbox server...
+                    </div>
+                  ) : chatterboxVoicesError ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-xs">
+                        <AlertCircle size={14} className="shrink-0" />
+                        {chatterboxVoicesError} — falling back to manual entry
+                      </div>
+                      <input
+                        type="text"
+                        value={formData.chatterboxVoice}
+                        onChange={(e) => handleChange('chatterboxVoice', e.target.value)}
+                        placeholder="default"
+                        className="w-full px-4 py-3 bg-white dark:bg-white/10 border border-blue-200 dark:border-blue-700 rounded-xl text-sm dark:text-white focus:ring-2 focus:ring-blue-400/30 outline-none"
+                      />
+                    </div>
+                  ) : (
+                    <select
+                      value={formData.chatterboxVoice}
+                      onChange={(e) => handleChange('chatterboxVoice', e.target.value)}
+                      className="w-full px-4 py-3 bg-white dark:bg-white/10 border border-blue-200 dark:border-blue-700 rounded-xl text-sm dark:text-white focus:ring-2 focus:ring-blue-400/30 outline-none"
+                    >
+                      <option value="default">🎙 Default Voice</option>
+                      {chatterboxVoices.filter(v => v.variant === 'SYSTEM').length > 0 && (
+                        <optgroup label="System Voices">
+                          {chatterboxVoices.filter(v => v.variant === 'SYSTEM').map((v) => (
+                            <option key={v.voiceId} value={v.voiceId}>
+                              {v.name}{v.language ? ` (${v.language})` : ''}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {chatterboxVoices.filter(v => v.variant === 'CUSTOM').length > 0 && (
+                        <optgroup label="Team Voices">
+                          {chatterboxVoices.filter(v => v.variant === 'CUSTOM').map((v) => (
+                            <option key={v.voiceId} value={v.voiceId}>
+                              {v.name}{v.language ? ` (${v.language})` : ''}
+                            </option>
+                          ))}
+                        </optgroup>
+                      )}
+                      {chatterboxVoices.length === 0 && (
+                        <option disabled>No custom voices found on server</option>
+                      )}
+                    </select>
+                  )}
+                  <p className="text-xs text-gray-500">
+                    Voices are fetched from your Chatterbox server. Upload voice clones via the Chatterbox UI.
+                  </p>
+                </div>
+
+                {/* Exaggeration */}
+                <div className="space-y-2">
+                  <Label>Exaggeration ({formData.chatterboxExaggeration.toFixed(1)})</Label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="2"
+                    step="0.1"
+                    value={formData.chatterboxExaggeration}
+                    onChange={(e) => handleChange('chatterboxExaggeration', parseFloat(e.target.value))}
+                    className="w-full accent-blue-500"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>Monotone (0)</span>
+                    <span>Natural (0.7)</span>
+                    <span>Dramatic (2)</span>
+                  </div>
+                </div>
+
+                {/* CFG Weight */}
+                <div className="space-y-2">
+                  <Label>CFG Weight ({formData.chatterboxCfgWeight.toFixed(2)})</Label>
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={formData.chatterboxCfgWeight}
+                    onChange={(e) => handleChange('chatterboxCfgWeight', parseFloat(e.target.value))}
+                    className="w-full accent-blue-500"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>More creative (0)</span>
+                    <span>Balanced (0.5)</span>
+                    <span>More accurate (1)</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Voice Selection — ElevenLabs only */}
+            {formData.voiceProvider !== 'chatterbox' && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Voice Selection</Label>
+                  <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={addVoiceManually}
+                      onChange={(e) => {
+                        setAddVoiceManually(e.target.checked);
+                        if (!e.target.checked) setManualVoiceId('');
+                      }}
+                      className="accent-vani-plum"
+                    />
+                    Add Voice ID Manually
+                  </label>
+                </div>
+
+                {addVoiceManually ? (
+                  <div className="space-y-2">
+                    <input
+                      type="text"
+                      value={manualVoiceId}
+                      onChange={(e) => setManualVoiceId(e.target.value)}
+                      placeholder="Enter ElevenLabs Voice ID"
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none h-12"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Enter the Voice ID from your ElevenLabs account
+                    </p>
+                  </div>
+                ) : voicesLoading ? (
+                  <div className="flex items-center gap-2 h-12 px-4 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-gray-500">
+                    <Loader2 size={16} className="animate-spin" />
+                    Loading voices...
+                  </div>
+                ) : (
+                  <VoiceSelect
+                    voices={voices}
+                    selectedVoiceId={formData.voiceId}
+                    onSelect={(voiceId) => handleChange('voiceId', voiceId)}
+                  />
+                )}
+              </div>
+            )}
+
+            {/* Voice Speed Control — ElevenLabs non-V3 only */}
+            {formData.voiceProvider !== 'chatterbox' && !['eleven_v3', 'eleven_ttv_v3'].includes(formData.voiceModel) && (
               <div className="space-y-2">
                 <Label>Voice Speed ({formData.voiceSpeed}x)</Label>
                 <input

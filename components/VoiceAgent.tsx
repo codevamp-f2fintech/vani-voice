@@ -12,6 +12,7 @@ import {
     Hotel,
     Car,
     GraduationCap,
+    Heart,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -57,6 +58,13 @@ const agents = [
         icon: GraduationCap,
         description: "Guidance on courses, admissions, and campus life.",
         gradient: "from-indigo-500 to-blue-500",
+    },
+    {
+        id: "agent_3701kmfqr6f2f84tft8te2yyh2hp", // Replace with actual Agent ID
+        name: "Parth Gautum Foundation",
+        icon: Heart,
+        description: "Support and assistance for the Parth Gautum Foundation.",
+        gradient: "from-rose-500 to-pink-500",
     },
 ];
 

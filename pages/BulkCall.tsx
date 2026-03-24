@@ -12,12 +12,16 @@ import {
     AlertCircle,
     Play,
     Pause,
-    FileText
+    FileText,
+    Flame,
+    CheckCircle,
+    AlertTriangle
 } from 'lucide-react';
 import { useAgents } from '../hooks/useAgents';
 import { validateE164 } from '../hooks/useOutboundCall';
 import { API_BASE_URL } from '../lib/config';
 import * as XLSX from 'xlsx';
+import { useModalWarmup } from '../hooks/useModalWarmup';
 
 type QueueResult = {
     to: string;
@@ -204,6 +208,14 @@ const BulkCall: React.FC = () => {
 
     const { agents, loading: agentsLoading } = useAgents();
     const activeAgents = agents.filter(a => a.status === 'active');
+
+    // Look up the full selected agent object for warm-up detection
+    const selectedAgent = useMemo(
+        () => activeAgents.find(a => a._id === selectedAgentId) ?? null,
+        [activeAgents, selectedAgentId]
+    );
+
+    const { needsWarmup, isWarmedUp, isWarming, warmupError, responseTimeMs, warmup } = useModalWarmup(selectedAgent);
 
     // ── Parse & validate numbers ──────────────────────────────────────────
     // Use simple direct parse for textarea: col[0]=phone, col[1]=name.
@@ -553,6 +565,63 @@ const BulkCall: React.FC = () => {
                         />
                     </Card>
 
+                    {/* Modal Warm-Up — only shown for Chatterbox agents */}
+                    {needsWarmup && (
+                        <Card className={`p-5 border-2 space-y-3 ${
+                            isWarmedUp
+                                ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20'
+                                : 'border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/20'
+                        }`}>
+                            <div className="flex items-center gap-3">
+                                <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+                                    isWarmedUp ? 'bg-green-500' : 'bg-orange-500'
+                                }`}>
+                                    {isWarmedUp
+                                        ? <CheckCircle size={18} className="text-white" />
+                                        : <Flame size={18} className="text-white" />
+                                    }
+                                </div>
+                                <div className="min-w-0">
+                                    <p className={`font-bold text-sm ${
+                                        isWarmedUp ? 'text-green-800 dark:text-green-200' : 'text-orange-800 dark:text-orange-200'
+                                    }`}>
+                                        {isWarmedUp
+                                            ? `Modal warm ${responseTimeMs ? `(${responseTimeMs}ms)` : ''}— ready!`
+                                            : 'Warm up Modal first'
+                                        }
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                        {isWarmedUp
+                                            ? 'Chatterbox ready — bulk calls will start quickly.'
+                                            : 'Modal goes cold between calls. Warm it up before starting.'
+                                        }
+                                    </p>
+                                </div>
+                            </div>
+
+                            {warmupError && (
+                                <div className="flex items-start gap-2 text-xs text-red-600 dark:text-red-400">
+                                    <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+                                    <span>{warmupError}</span>
+                                </div>
+                            )}
+
+                            {!isWarmedUp && (
+                                <Button
+                                    className="w-full h-10 text-sm bg-orange-500 hover:bg-orange-600 text-white border-0"
+                                    onClick={warmup}
+                                    disabled={isWarming || starting}
+                                >
+                                    {isWarming ? (
+                                        <><Loader2 size={14} className="mr-2 animate-spin" />Warming up… (~30s)</>
+                                    ) : (
+                                        <><Flame size={14} className="mr-2" />{warmupError ? 'Retry Warm Up' : 'Warm Up Modal'}</>
+                                    )}
+                                </Button>
+                            )}
+                        </Card>
+                    )}
+
                     {/* Actions */}
                     <div className="space-y-3">
                         {starting ? (
@@ -567,9 +636,10 @@ const BulkCall: React.FC = () => {
                             <Button
                                 className="w-full h-12 shadow-xl"
                                 onClick={startQueue}
-                                disabled={parsed.valid.length === 0 || selectedAgentId === 'default' || !selectedAgentId}
+                                disabled={parsed.valid.length === 0 || selectedAgentId === 'default' || !selectedAgentId || (needsWarmup && !isWarmedUp)}
                             >
-                                <Play size={18} className="mr-2" /> Start Calls ({parsed.valid.length})
+                                <Play size={18} className="mr-2" />
+                                {needsWarmup && !isWarmedUp ? 'Warm Up First' : `Start Calls (${parsed.valid.length})`}
                             </Button>
                         )}
                         <Button

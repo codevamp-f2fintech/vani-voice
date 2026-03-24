@@ -135,7 +135,7 @@ const VoiceSelect: React.FC<VoiceSelectProps> = ({ voices, selectedVoiceId, onSe
                 {libraryVoices.length > 0 && (
                     <>
                         <div className="sticky top-0 px-3 py-2 bg-gray-100 dark:bg-white/10 border-b border-gray-200 dark:border-white/10 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                            ElevenLabs Library
+                            Voice Library
                         </div>
                         {libraryVoices.map((voice) => (
                             <VoiceItem

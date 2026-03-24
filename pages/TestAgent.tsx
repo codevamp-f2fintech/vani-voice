@@ -2,10 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Card, Button, Input, Label, Badge } from '../components/UI';
-import { Phone, Loader2, PhoneCall, ArrowLeft, ArrowRight, Mic, User } from 'lucide-react';
+import { Phone, Loader2, PhoneCall, ArrowLeft, ArrowRight, Mic, User, Flame, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useAgent } from '../hooks/useAgents';
 import { useIndependentCall } from '../hooks/useIndependentCall';
 import { validateE164 } from '../hooks/useOutboundCall';
+import { useModalWarmup } from '../hooks/useModalWarmup';
 
 const TestAgent: React.FC = () => {
     const navigate = useNavigate();
@@ -16,6 +17,7 @@ const TestAgent: React.FC = () => {
     const [callResult, setCallResult] = useState<any>(null);
 
     const { makeCall, calling, error } = useIndependentCall();
+    const { needsWarmup, isWarmedUp, isWarming, warmupError, responseTimeMs, warmup } = useModalWarmup(agent);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -145,12 +147,70 @@ const TestAgent: React.FC = () => {
                         </div>
                     )}
 
+                    {/* Modal Warm-Up — only shown for Chatterbox agents */}
+                    {needsWarmup && (
+                        <div className={`p-5 rounded-2xl border-2 space-y-3 ${
+                            isWarmedUp
+                                ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
+                                : 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800'
+                        }`}>
+                            <div className="flex items-center gap-3">
+                                <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+                                    isWarmedUp ? 'bg-green-500' : 'bg-orange-500'
+                                }`}>
+                                    {isWarmedUp
+                                        ? <CheckCircle size={18} className="text-white" />
+                                        : <Flame size={18} className="text-white" />
+                                    }
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className={`font-bold text-sm ${
+                                        isWarmedUp ? 'text-green-800 dark:text-green-200' : 'text-orange-800 dark:text-orange-200'
+                                    }`}>
+                                        {isWarmedUp
+                                            ? `Modal is warm ${responseTimeMs ? `(${responseTimeMs}ms)` : ''}— ready!`
+                                            : 'Warm up Modal before the test call'
+                                        }
+                                    </p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                        {isWarmedUp
+                                            ? 'Chatterbox TTS container is running — first response will be fast.'
+                                            : 'Chatterbox runs on Modal (serverless). Warm it up to avoid a 30–60s delay on the first utterance.'
+                                        }
+                                    </p>
+                                </div>
+                            </div>
+
+                            {warmupError && (
+                                <div className="flex items-start gap-2 text-xs text-red-600 dark:text-red-400">
+                                    <AlertTriangle size={13} className="mt-0.5 shrink-0" />
+                                    <span>{warmupError}</span>
+                                </div>
+                            )}
+
+                            {!isWarmedUp && (
+                                <Button
+                                    type="button"
+                                    className="w-full h-10 text-sm bg-orange-500 hover:bg-orange-600 text-white border-0"
+                                    onClick={warmup}
+                                    disabled={isWarming}
+                                >
+                                    {isWarming ? (
+                                        <><Loader2 size={15} className="mr-2 animate-spin" />Warming up… (may take ~30s)</>
+                                    ) : (
+                                        <><Flame size={15} className="mr-2" />{warmupError ? 'Retry Warm Up' : 'Warm Up Modal'}</>
+                                    )}
+                                </Button>
+                            )}
+                        </div>
+                    )}
+
                     {/* Actions */}
                     <div className="flex gap-4 pt-4">
                         <Button
                             type="submit"
                             className="flex-1 h-14 text-lg shadow-xl"
-                            disabled={calling || agent.status !== 'active'}
+                            disabled={calling || agent.status !== 'active' || (needsWarmup && !isWarmedUp)}
                         >
                             {calling ? (
                                 <>
@@ -160,7 +220,7 @@ const TestAgent: React.FC = () => {
                             ) : (
                                 <>
                                     <Phone size={20} className="mr-2" />
-                                    Make Test Call
+                                    {needsWarmup && !isWarmedUp ? 'Warm Up First' : 'Make Test Call'}
                                 </>
                             )}
                         </Button>
