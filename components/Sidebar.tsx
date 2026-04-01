@@ -13,7 +13,8 @@ import {
   PlusCircle,
   PhoneCall,
   Upload,
-  Wallet
+  Wallet,
+  Star
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
@@ -27,7 +28,8 @@ const Sidebar: React.FC<{ isOpen: boolean, setOpen: (o: boolean) => void }> = ({
     { icon: PhoneCall, label: 'Phone Numbers', path: '/phone-numbers' },
     { icon: Grid2X2, label: 'Templates', path: '/templates' },
     { icon: PhoneCall, label: 'Test Call', path: '/test-call' },
-    { icon: Upload, label: 'Bulk Calls', path: '/bulk-call' },
+    { icon: Upload, label: 'Campaigns', path: '/campaigns' },
+    { icon: Star, label: 'Leads', path: '/leads' },
     { icon: FileAudio, label: 'Call Logs', path: '/call-logs' },
     { icon: Database, label: 'Knowledge Base', path: '/knowledge' },
     { icon: CreditCard, label: 'Billing & Usage', path: '/pricing' },

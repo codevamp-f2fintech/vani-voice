@@ -48,6 +48,38 @@ export function useCalls(options: UseCallsOptions = {}) {
     return { calls, loading, error, refetch: loadCalls };
 }
 
+export function useLeads(options: { agentId?: string } = {}) {
+    const [leads, setLeads] = useState<Call[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const loadLeads = useCallback(async () => {
+        try {
+            setLoading(true);
+            setError(null);
+            const params = new URLSearchParams();
+            if (options.agentId) params.set('agentId', options.agentId);
+
+            const queryString = params.toString();
+            const endpoint = `/leads/list${queryString ? `?${queryString}` : ''}`;
+            const data = await api.get<Call[]>(endpoint);
+            setLeads(Array.isArray(data) ? data : []);
+        } catch (err: any) {
+            console.error('Error loading leads:', err);
+            setError(err.message || 'Failed to load leads');
+            setLeads([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [options.agentId]);
+
+    useEffect(() => {
+        loadLeads();
+    }, [loadLeads]);
+
+    return { leads, loading, error, refetch: loadLeads };
+}
+
 export function useCall(id: string | null) {
     const [call, setCall] = useState<Call | null>(null);
     const [loading, setLoading] = useState(false);

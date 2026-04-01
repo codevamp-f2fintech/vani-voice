@@ -23,13 +23,7 @@ import { API_BASE_URL } from '../lib/config';
 import * as XLSX from 'xlsx';
 import { useModalWarmup } from '../hooks/useModalWarmup';
 
-type QueueResult = {
-    to: string;
-    name?: string;
-    ok: boolean;
-    id?: string;
-    error?: string
-};
+// QueueResult removed 
 
 // ─── Phone Auto-Formatter ──────────────────────────────────────────────────────
 // Tries to turn a raw string into an E.164 number.
@@ -197,13 +191,12 @@ function parsePastedText(text: string): string[][] {
 const BulkCall: React.FC = () => {
     const navigate = useNavigate();
     const [text, setText] = useState('');
+    const [campaignName, setCampaignName] = useState('');
     const [selectedAgentId, setSelectedAgentId] = useState('default');
     const [concurrency, setConcurrency] = useState(3);
     const [starting, setStarting] = useState(false);
-    const [results, setResults] = useState<QueueResult[]>([]);
     const [fileName, setFileName] = useState<string | null>(null);
     const [parseWarning, setParseWarning] = useState<string | null>(null);
-    const abortRef = useRef<AbortController | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const { agents, loading: agentsLoading } = useAgents();
@@ -248,9 +241,8 @@ const BulkCall: React.FC = () => {
     }, [text]);
 
     const progress = useMemo(() => {
-        if (!results.length || !parsed.valid.length) return 0;
-        return Math.min(100, Math.round((results.length / parsed.valid.length) * 100));
-    }, [results.length, parsed.valid.length]);
+        return 0; // Migrated to Campaign Details
+    }, []);
 
     // ── File Upload Handler ───────────────────────────────────────────────
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -312,77 +304,43 @@ const BulkCall: React.FC = () => {
             return;
         }
 
-        setStarting(true);
-        setResults([]);
-        const controller = new AbortController();
-        abortRef.current = controller;
-
-        const queue = [...parsed.valid];
-        let idx = 0;
-
-        async function worker() {
-            while (true) {
-                if (controller.signal.aborted) return;
-                const i = idx++;
-                if (i >= queue.length) return;
-                const { to, name } = queue[i];
-
-                try {
-                    const body: any = { to, agentId: selectedAgentId };
-                    if (name) body.variables = { name };
-
-                    const res = await fetch(`${API_BASE_URL}/api/independent-calls/outbound`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${localStorage.getItem('vani_access_token')}`
-                        },
-                        body: JSON.stringify(body),
-                        signal: controller.signal,
-                    });
-                    const data = await res.json().catch(() => ({}));
-                    const ok = res.ok;
-                    setResults(prev => [...prev, {
-                        to,
-                        name,
-                        ok,
-                        id: data?.call?.sid || data?.call?.id,
-                        error: ok ? undefined : data?.error || data?.message || 'Failed'
-                    }]);
-                } catch (e: any) {
-                    if (controller.signal.aborted) return;
-                    setResults(prev => [...prev, { to, name, ok: false, error: e?.message || 'Error' }]);
-                }
-            }
+        if (!campaignName.trim()) {
+            alert('Please enter a Campaign Name for these calls.');
+            return;
         }
 
-        const workers = Array.from({ length: Math.max(1, concurrency) }, () => worker());
-        await Promise.all(workers);
-        setStarting(false);
+        setStarting(true);
+        try {
+            const leads = parsed.valid.map(x => ({ to: x.to, name: x.name, variables: { name: x.name } }));
+            const res = await fetch(`${API_BASE_URL}/api/campaigns`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('vani_access_token')}`
+                },
+                body: JSON.stringify({
+                    name: campaignName.trim(),
+                    agentId: selectedAgentId,
+                    concurrency,
+                    leads
+                })
+            });
+            const data = await res.json();
+            if (res.ok && data.campaignId) {
+                navigate(`/campaigns/${data.campaignId}`);
+            } else {
+                alert(data.error || 'Failed to start campaign');
+                setStarting(false);
+            }
+        } catch (e: any) {
+             alert(e.message || 'Error executing request');
+             setStarting(false);
+        }
     }
 
     function cancel() {
-        abortRef.current?.abort();
         setStarting(false);
     }
-
-    function downloadFailures() {
-        const failed = results.filter(r => !r.ok);
-        if (!failed.length) {
-            alert('No failures. All calls were queued successfully!');
-            return;
-        }
-        const csv = 'phone,error\n' + failed.map(f => `${f.to},"${f.error || ''}"`).join('\n');
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'bulk-call-failures.csv';
-        a.click();
-    }
-
-    const succeeded = results.filter(r => r.ok).length;
-    const failed = results.filter(r => !r.ok).length;
 
     return (
         <div className="max-w-4xl mx-auto space-y-8">
@@ -478,13 +436,32 @@ const BulkCall: React.FC = () => {
                         </div>
                     </Card>
 
-                    {/* Agent Selection */}
+                    {/* Campaign and Agent Selection */}
                     <Card className="p-6 border-2">
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <Label>Select Agent for All Calls</Label>
-                                <Badge className="bg-vani-plum text-white text-xs">Required</Badge>
+                        <div className="space-y-6">
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <Label>Campaign Name</Label>
+                                    <Badge className="bg-vani-plum text-white text-xs">Required</Badge>
+                                </div>
+                                <Input
+                                    value={campaignName}
+                                    onChange={e => setCampaignName(e.target.value)}
+                                    placeholder="e.g. Real Estate Q1 Follow-ups"
+                                    className="h-12 border-2 border-gray-100 dark:border-white/10"
+                                />
+                                <p className="text-xs text-gray-500">
+                                    Identify these calls later on the Interested Leads dashboard.
+                                </p>
                             </div>
+
+                            <hr className="border-gray-100 dark:border-white/10" />
+
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <Label>Select Agent for All Calls</Label>
+                                    <Badge className="bg-vani-plum text-white text-xs">Required</Badge>
+                                </div>
                             {agentsLoading ? (
                                 <div className="flex items-center gap-2 text-gray-500">
                                     <Loader2 size={16} className="animate-spin" />
@@ -511,6 +488,7 @@ const BulkCall: React.FC = () => {
                             <p className="text-xs text-gray-500">
                                 Independent pipeline requires agent selection
                             </p>
+                            </div>
                         </div>
                     </Card>
                 </div>
@@ -636,10 +614,14 @@ const BulkCall: React.FC = () => {
                             <Button
                                 className="w-full h-12 shadow-xl"
                                 onClick={startQueue}
-                                disabled={parsed.valid.length === 0 || selectedAgentId === 'default' || !selectedAgentId || (needsWarmup && !isWarmedUp)}
+                                disabled={parsed.valid.length === 0 || selectedAgentId === 'default' || !selectedAgentId || !campaignName.trim() || (needsWarmup && !isWarmedUp)}
                             >
                                 <Play size={18} className="mr-2" />
-                                {needsWarmup && !isWarmedUp ? 'Warm Up First' : `Start Calls (${parsed.valid.length})`}
+                                {needsWarmup && !isWarmedUp 
+                                    ? 'Warm Up First' 
+                                    : !campaignName.trim() 
+                                    ? 'Enter Campaign Name'
+                                    : `Start Calls (${parsed.valid.length})`}
                             </Button>
                         )}
                         <Button
@@ -654,85 +636,10 @@ const BulkCall: React.FC = () => {
                 </div>
             </div>
 
-            {/* Progress Section */}
-            {(starting || results.length > 0) && (
-                <Card className="p-6 border-2">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="font-bold dark:text-white">Progress</h3>
-                        <span className="text-sm text-gray-500">{progress}%</span>
-                    </div>
-
-                    <div className="h-3 w-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden mb-4">
-                        <div
-                            className="h-full vani-gradient transition-all duration-300"
-                            style={{ width: `${progress}%` }}
-                        />
-                    </div>
-
-                    <div className="flex gap-6 mb-4">
-                        <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full bg-green-500" />
-                            <span className="text-sm">Success: {succeeded}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full bg-red-500" />
-                            <span className="text-sm">Failed: {failed}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full bg-gray-300" />
-                            <span className="text-sm">Pending: {parsed.valid.length - results.length}</span>
-                        </div>
-                    </div>
-
-                    {results.length > 0 && (
-                        <>
-                            <div className="flex justify-between items-center mb-3">
-                                <span className="text-sm text-gray-500">
-                                    Completed {results.length} / {parsed.valid.length}
-                                </span>
-                                <Button variant="outline" size="sm" onClick={downloadFailures}>
-                                    <Download size={14} className="mr-2" /> Download Failures
-                                </Button>
-                            </div>
-                            <div className="max-h-64 overflow-auto rounded-xl border border-gray-100 dark:border-white/10">
-                                <table className="w-full text-sm">
-                                    <thead className="bg-gray-50 dark:bg-white/5 sticky top-0">
-                                        <tr>
-                                            <th className="px-4 py-3 text-left font-bold text-gray-500">Phone</th>
-                                            <th className="px-4 py-3 text-left font-bold text-gray-500">Name</th>
-                                            <th className="px-4 py-3 text-left font-bold text-gray-500">Status</th>
-                                            <th className="px-4 py-3 text-left font-bold text-gray-500">Call ID</th>
-                                            <th className="px-4 py-3 text-left font-bold text-gray-500">Error</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100 dark:divide-white/5">
-                                        {results.map((r, i) => (
-                                            <tr key={`${r.to}-${i}`}>
-                                                <td className="px-4 py-3 font-mono">{r.to}</td>
-                                                <td className="px-4 py-3 text-sm">{r.name || '—'}</td>
-                                                <td className="px-4 py-3">
-                                                    {r.ok ? (
-                                                        <Badge variant="success">Queued</Badge>
-                                                    ) : (
-                                                        <Badge variant="warning">Failed</Badge>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-3 font-mono text-xs">{r.id?.slice(0, 12) || '—'}</td>
-                                                <td className="px-4 py-3 text-red-500">{r.error || '—'}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </>
-                    )}
-                </Card>
-            )}
-
             {/* Navigation */}
             <div className="flex gap-4">
-                <Button variant="outline" onClick={() => navigate('/test-call')}>
-                    Single Call
+                <Button variant="outline" onClick={() => navigate('/campaigns')}>
+                    View Campaigns
                 </Button>
                 <Button variant="outline" onClick={() => navigate('/logs')}>
                     View Call Logs

@@ -13,9 +13,12 @@ import AgentsPage from './pages/AgentsPage';
 import KnowledgeBase from './pages/KnowledgeBase';
 import TestCall from './pages/TestCall';
 import BulkCall from './pages/BulkCall';
+import Campaigns from './pages/Campaigns';
+import CampaignDetails from './pages/CampaignDetails';
 import PhoneNumbers from './pages/PhoneNumbers';
 import TestAgent from './pages/TestAgent';
 import CallDetails from './pages/CallDetails';
+import LeadsDashboard from './pages/LeadsDashboard';
 import Sidebar from './components/Sidebar';
 import { AppTheme } from './types';
 import { Sun, Moon, Bell, Search, ChevronDown, Menu, X, LogOut } from 'lucide-react';
@@ -184,11 +187,14 @@ const AppRoutes: React.FC = () => {
         <Route path="/call-logs/:callId" element={<ProtectedRoute><CallDetails /></ProtectedRoute>} />
         <Route path="/logs" element={<Navigate to="/call-logs" replace />} />
         <Route path="/recordings" element={<Navigate to="/call-logs" replace />} />
+        <Route path="/leads" element={<ProtectedRoute><LeadsDashboard /></ProtectedRoute>} />
         <Route path="/knowledge" element={<ProtectedRoute><KnowledgeBase /></ProtectedRoute>} />
         <Route path="/pricing" element={<ProtectedRoute><Pricing /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
         <Route path="/test-call" element={<ProtectedRoute><TestCall /></ProtectedRoute>} />
         <Route path="/bulk-call" element={<ProtectedRoute><BulkCall /></ProtectedRoute>} />
+        <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
+        <Route path="/campaigns/:id" element={<ProtectedRoute><CampaignDetails /></ProtectedRoute>} />
         <Route path="/phone-numbers" element={<ProtectedRoute><PhoneNumbers /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
