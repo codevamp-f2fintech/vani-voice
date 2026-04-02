@@ -13,6 +13,8 @@ interface UseCallsOptions {
 
 export function useCalls(options: UseCallsOptions = {}) {
     const [calls, setCalls] = useState<Call[]>([]);
+    const [totalCount, setTotalCount] = useState(0);
+    const [totalDurationSeconds, setTotalDurationSeconds] = useState(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -30,12 +32,28 @@ export function useCalls(options: UseCallsOptions = {}) {
 
             const queryString = params.toString();
             const endpoint = `/calls/list${queryString ? `?${queryString}` : ''}`;
-            const data = await api.get<Call[]>(endpoint);
-            setCalls(Array.isArray(data) ? data : []);
+            const data = await api.get<any>(endpoint);
+
+            // Handle both old array format and new paginated { calls, totalCount } format
+            if (Array.isArray(data)) {
+                setCalls(data);
+                setTotalCount(data.length);
+                setTotalDurationSeconds(0); // Not available in old format
+            } else if (data && Array.isArray(data.calls)) {
+                setCalls(data.calls);
+                setTotalCount(data.totalCount || data.calls.length);
+                setTotalDurationSeconds(data.totalDurationSeconds || 0);
+            } else {
+                setCalls([]);
+                setTotalCount(0);
+                setTotalDurationSeconds(0);
+            }
         } catch (err: any) {
             console.error('Error loading calls:', err);
             setError(err.message || 'Failed to load calls');
-            setCalls([]); // Set to empty array on error
+            setCalls([]);
+            setTotalCount(0);
+            setTotalDurationSeconds(0);
         } finally {
             setLoading(false);
         }
@@ -45,7 +63,21 @@ export function useCalls(options: UseCallsOptions = {}) {
         loadCalls();
     }, [loadCalls]);
 
-    return { calls, loading, error, refetch: loadCalls };
+    const deleteCalls = async (ids: string[]) => {
+        setLoading(true);
+        try {
+            await api.post('/calls/bulk-delete', { ids });
+            await loadCalls();
+            return { success: true };
+        } catch (err: any) {
+            console.error('Error deleting calls:', err);
+            setError(err.message || 'Failed to delete calls');
+            setLoading(false);
+            return { success: false, error: err.message };
+        }
+    };
+
+    return { calls, totalCount, totalDurationSeconds, loading, error, refetch: loadCalls, deleteCalls };
 }
 
 export function useLeads(options: { agentId?: string } = {}) {
@@ -115,6 +147,20 @@ export function formatDuration(startedAt?: string, endedAt?: string): string {
     );
     const mins = Math.floor(duration / 60);
     const secs = duration % 60;
+    return `${mins}m ${secs}s`;
+}
+
+export function formatDurationSeconds(duration?: number): string {
+    if (typeof duration !== 'number' || duration < 0) return '0m 0s';
+    
+    // Add logic to show hours if duration is large enough
+    const hours = Math.floor(duration / 3600);
+    const mins = Math.floor((duration % 3600) / 60);
+    const secs = Math.floor(duration % 60);
+    
+    if (hours > 0) {
+        return `${hours}h ${mins}m ${secs}s`;
+    }
     return `${mins}m ${secs}s`;
 }
 

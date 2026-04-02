@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Card, Button, Badge } from '../components/UI';
 import {
     ArrowLeft,
@@ -20,7 +20,10 @@ import type { Call } from '../lib/types';
 
 const CallDetails: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { callId } = useParams<{ callId: string }>();
+    const backPath = (location.state as any)?.from || '/call-logs';
+    const backLabel = backPath === '/leads' ? 'Back to Leads' : 'Back to Call Logs';
     const [call, setCall] = useState<Call | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -129,8 +132,8 @@ const CallDetails: React.FC = () => {
     if (error || !call) {
         return (
             <div className="space-y-6">
-                <Button variant="ghost" onClick={() => navigate('/call-logs')} className="text-gray-500">
-                    <ArrowLeft size={18} className="mr-2" /> Back to Call Logs
+                <Button variant="ghost" onClick={() => navigate(backPath)} className="text-gray-500">
+                    <ArrowLeft size={18} className="mr-2" /> {backLabel}
                 </Button>
                 <Card className="p-12 text-center">
                     <p className="text-red-500">{error || 'Call not found'}</p>
@@ -146,7 +149,7 @@ const CallDetails: React.FC = () => {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" onClick={() => navigate('/call-logs')} className="text-gray-500 p-2">
+                    <Button variant="ghost" onClick={() => navigate(backPath)} className="text-gray-500 p-2" title={backLabel}>
                         <ArrowLeft size={20} />
                     </Button>
                     <div>
