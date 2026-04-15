@@ -68,7 +68,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ theme, toggleTheme }) => {
             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
           </button>
           <Link to="/login" className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-vani-plum hidden sm:block">Login</Link>
-          <Link to="/signup">
+          <Link to="/login">
             <Button size="sm">Get Started</Button>
           </Link>
         </div>
@@ -94,7 +94,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ theme, toggleTheme }) => {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6 pt-4">
-            <Link to="/signup">
+            <Link to="/login">
               <Button size="lg" className="w-full sm:w-auto h-16 px-10 text-lg shadow-2xl">
                 Get Started for Free <ArrowRight className="ml-2" size={24} />
               </Button>

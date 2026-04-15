@@ -4,7 +4,8 @@ import { Card, Button, Input, Label } from '../components/UI';
 import { Mail, Lock, Chrome, ArrowRight, Github, Loader2, User, Phone, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
-const Auth: React.FC<{ mode: 'login' | 'signup' }> = ({ mode }) => {
+const Auth: React.FC<{ mode?: 'login' | 'signup' }> = () => {
+  const mode = 'login'; // Force login mode
   const navigate = useNavigate();
   const { login, register, isLoading, error, clearError, isAuthenticated } = useAuth();
 
@@ -123,23 +124,7 @@ const Auth: React.FC<{ mode: 'login' | 'signup' }> = ({ mode }) => {
           )}
 
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {/* Name Field - Only for signup */}
-            {mode === 'signup' && (
-              <div className="space-y-2">
-                <Label>Full Name</Label>
-                <div className="relative">
-                  <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <Input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    placeholder="Amit Sharma"
-                    className="pl-12 h-14 text-base font-bold"
-                  />
-                </div>
-              </div>
-            )}
+
 
             {/* Email Field */}
             <div className="space-y-2">
@@ -157,23 +142,7 @@ const Auth: React.FC<{ mode: 'login' | 'signup' }> = ({ mode }) => {
               </div>
             </div>
 
-            {/* Phone Field - Only for signup */}
-            {mode === 'signup' && (
-              <div className="space-y-2">
-                <Label>Phone Number (Optional)</Label>
-                <div className="relative">
-                  <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <Input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    placeholder="+91 98765 43210"
-                    className="pl-12 h-14 text-base font-bold"
-                  />
-                </div>
-              </div>
-            )}
+
 
             {/* Password Field */}
             <div className="space-y-2">
@@ -201,23 +170,7 @@ const Auth: React.FC<{ mode: 'login' | 'signup' }> = ({ mode }) => {
               </div>
             </div>
 
-            {/* Confirm Password - Only for signup */}
-            {mode === 'signup' && (
-              <div className="space-y-2">
-                <Label>Confirm Password</Label>
-                <div className="relative">
-                  <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <Input
-                    type={showPassword ? 'text' : 'password'}
-                    name="confirmPassword"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    placeholder="••••••••"
-                    className="pl-12 h-14 text-base font-bold"
-                  />
-                </div>
-              </div>
-            )}
+
 
             <Button className="w-full h-16 text-lg shadow-xl" type="submit" disabled={isLoading}>
               {isLoading ? (
@@ -244,11 +197,7 @@ const Auth: React.FC<{ mode: 'login' | 'signup' }> = ({ mode }) => {
         </Card>
 
         <p className="text-center text-sm font-medium text-gray-500 dark:text-gray-400">
-          {mode === 'login' ? (
-            <>Don't have an account? <Link to="/signup" className="text-vani-plum font-black hover:underline decoration-2">Sign up for free</Link></>
-          ) : (
-            <>Already have an account? <Link to="/login" className="text-vani-plum font-black hover:underline decoration-2">Log in</Link></>
-          )}
+          Need an account? <a href="mailto:support@vanivoice.ai" className="text-vani-plum font-black hover:underline decoration-2">Contact Sales</a>
         </p>
       </div>
     </div>

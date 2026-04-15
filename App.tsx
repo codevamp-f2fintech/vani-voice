@@ -138,7 +138,7 @@ const Layout: React.FC<{ children: React.ReactElement }> = ({ children }) => {
 
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
 
-  const isPublicPage = location.pathname === '/' || location.pathname === '/login' || location.pathname === '/signup';
+  const isPublicPage = location.pathname === '/' || location.pathname === '/login';
 
   if (isPublicPage) {
     return (
@@ -174,7 +174,7 @@ const AppRoutes: React.FC = () => {
         {/* Public Routes */}
         <Route path="/" element={<LandingPage theme="dark" toggleTheme={() => { }} />} />
         <Route path="/login" element={<Auth mode="login" />} />
-        <Route path="/signup" element={<Auth mode="signup" />} />
+
 
         {/* Protected Routes */}
         <Route path="/dashboard" element={<ProtectedRoute><DashboardHome /></ProtectedRoute>} />
