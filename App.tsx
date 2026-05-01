@@ -19,6 +19,7 @@ import PhoneNumbers from './pages/PhoneNumbers';
 import TestAgent from './pages/TestAgent';
 import CallDetails from './pages/CallDetails';
 import LeadsDashboard from './pages/LeadsDashboard';
+import CustomCall from './pages/CustomCall';
 import Sidebar from './components/Sidebar';
 import { AppTheme } from './types';
 import { Sun, Moon, Bell, Search, ChevronDown, Menu, X, LogOut } from 'lucide-react';
@@ -196,6 +197,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
         <Route path="/campaigns/:id" element={<ProtectedRoute><CampaignDetails /></ProtectedRoute>} />
         <Route path="/phone-numbers" element={<ProtectedRoute><PhoneNumbers /></ProtectedRoute>} />
+        <Route path="/custom-call" element={<ProtectedRoute><CustomCall /></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Layout>

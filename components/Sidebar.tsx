@@ -12,6 +12,7 @@ import {
   X,
   PlusCircle,
   PhoneCall,
+  PhoneOutgoing,
   Upload,
   Wallet,
   Star
@@ -28,6 +29,7 @@ const Sidebar: React.FC<{ isOpen: boolean, setOpen: (o: boolean) => void }> = ({
     { icon: PhoneCall, label: 'Phone Numbers', path: '/phone-numbers' },
     { icon: Grid2X2, label: 'Templates', path: '/templates' },
     { icon: PhoneCall, label: 'Test Call', path: '/test-call' },
+    { icon: PhoneOutgoing, label: 'Custom Call', path: '/custom-call' },
     { icon: Upload, label: 'Campaigns', path: '/campaigns' },
     { icon: Star, label: 'Leads', path: '/leads' },
     { icon: FileAudio, label: 'Call Logs', path: '/call-logs' },
