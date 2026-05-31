@@ -61,9 +61,9 @@ const agents = [
     },
     {
         id: "agent_3701kmfqr6f2f84tft8te2yyh2hp", // Replace with actual Agent ID
-        name: "Parth Gautum Foundation",
+        name: "NGO",
         icon: Heart,
-        description: "Support and assistance for the Parth Gautum Foundation.",
+        description: "Support and assistance for the NGA",
         gradient: "from-rose-500 to-pink-500",
     },
 ];

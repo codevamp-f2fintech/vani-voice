@@ -72,8 +72,8 @@ const CreateAgentWizard: React.FC = () => {
     status: 'active' as 'active' | 'inactive' | 'draft',
 
     // Model configuration
-    modelProvider: 'openai',
-    modelName: 'gpt-4o',
+    modelProvider: 'gemini',
+    modelName: 'gemini-2.5-flash',
     systemPrompt: `You are a helpful Voice AI Assistant for Bharat.
 - Tone: Helpful, empathetic, and professional.
 - Language: Primary Hindi with English technical terms.
@@ -204,8 +204,8 @@ const CreateAgentWizard: React.FC = () => {
         status: existingAgent.status || 'active',
 
         // Model
-        modelProvider: config.model?.provider || 'openai',
-        modelName: config.model?.model || 'gpt-4o',
+        modelProvider: config.model?.provider || 'gemini',
+        modelName: config.model?.model || 'gemini-2.5-flash',
         systemPrompt: config.model?.messages?.[0]?.content || config.model?.systemPrompt || prev.systemPrompt,
         temperature: config.model?.temperature ?? 0.7,
         maxTokens: config.model?.maxTokens ?? 500,
@@ -553,13 +553,17 @@ const CreateAgentWizard: React.FC = () => {
                 <Label>Model Provider</Label>
                 <select
                   value={formData.modelProvider}
-                  onChange={(e) => handleChange('modelProvider', e.target.value)}
+                  onChange={(e) => {
+                    const p = e.target.value;
+                    handleChange('modelProvider', p);
+                    // Auto-set recommended model name when provider changes
+                    if (p === 'gemini') handleChange('modelName', 'gemini-2.5-flash');
+                    if (p === 'groq')   handleChange('modelName', 'llama-3.3-70b-versatile');
+                  }}
                   className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
                 >
-                  <option value="openai">OpenAI</option>
-                  <option value="anthropic">Anthropic</option>
+                  <option value="gemini">Gemini</option>
                   <option value="groq">Groq</option>
-                  <option value="together-ai">Together AI</option>
                 </select>
               </div>
               <div className="space-y-2">
@@ -570,9 +574,22 @@ const CreateAgentWizard: React.FC = () => {
                   placeholder="gpt-4o"
                   className="h-12"
                 />
-                <p className="text-xs text-gray-500">Examples: gpt-4o, gpt-4, claude-3-opus</p>
+                <p className="text-xs text-gray-500">
+                  {formData.modelProvider === 'groq' ? 'Examples: llama-3.3-70b-versatile, llama-3.1-8b-instant, mixtral-8x7b-32768' : 'Examples: gemini-2.5-flash, gemini-2.0-flash-exp'}
+                </p>
               </div>
             </div>
+
+            {/* Groq info box */}
+            {formData.modelProvider === 'groq' && (
+              <div className="flex items-start gap-2 p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl text-xs text-orange-700 dark:text-orange-300">
+                <span className="mt-0.5">⚡</span>
+                <div>
+                  <p className="font-semibold">Groq LPU — Ultra-low latency inference</p>
+                  <p className="mt-0.5 opacity-80">Groq's Language Processing Units deliver extremely fast token generation (&gt;300 tokens/sec). Requires <code className="bg-orange-100 dark:bg-orange-800 px-1 rounded">GROQ_API_KEY</code> in server .env. Get a free key at <a href="https://console.groq.com" target="_blank" rel="noreferrer" className="underline">console.groq.com</a>.</p>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>System Prompt</Label>
@@ -638,6 +655,7 @@ const CreateAgentWizard: React.FC = () => {
                 >
                   <option value="11labs">ElevenLabs</option>
                   <option value="chatterbox">Chatterbox (Self-hosted)</option>
+                  <option value="sarvam">Sarvam AI</option>
                   <option value="azure">Azure</option>
                   <option value="playht">PlayHT</option>
                   <option value="deepgram">Deepgram</option>
@@ -806,8 +824,69 @@ const CreateAgentWizard: React.FC = () => {
               </div>
             )}
 
+            {/* ── Sarvam AI-specific info ── */}
+            {formData.voiceProvider === 'sarvam' && (
+              <div className="space-y-5 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl">
+                <div className="flex items-start gap-2">
+                  <span className="text-emerald-500 mt-0.5">🇮🇳</span>
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-200">Sarvam AI — Bulbul v3 (Indian Languages)</p>
+                    <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5">
+                      Supports Hindi, English (Indian), Tamil, Telugu, Kannada, Malayalam, Gujarati, Marathi, Bengali, Punjabi, and Odia.
+                      Requires <code className="bg-emerald-100 dark:bg-emerald-800 px-1 rounded">SARVAM_API_KEY</code> in server <code className="bg-emerald-100 dark:bg-emerald-800 px-1 rounded">.env</code>.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Speaker selection */}
+                <div className="space-y-2">
+                  <Label>Speaker Voice</Label>
+                  <select
+                    value={formData.voiceId}
+                    onChange={(e) => handleChange('voiceId', e.target.value)}
+                    className="w-full px-4 py-3 bg-white dark:bg-white/10 border border-emerald-200 dark:border-emerald-700 rounded-xl text-sm dark:text-white focus:ring-2 focus:ring-emerald-400/30 outline-none"
+                  >
+                    <optgroup label="Hindi (hi-IN)">
+                      <option value="meera">Meera — Female, Natural</option>
+                      <option value="pavithra">Pavithra — Female, Warm</option>
+                      <option value="maitreyi">Maitreyi — Female, Clear</option>
+                      <option value="arvind">Arvind — Male, Professional</option>
+                      <option value="amol">Amol — Male, Calm</option>
+                      <option value="amartya">Amartya — Male, Expressive</option>
+                    </optgroup>
+                    <optgroup label="Indian English (en-IN)">
+                      <option value="meera">Meera — Female</option>
+                      <option value="arvind">Arvind — Male</option>
+                    </optgroup>
+                  </select>
+                  <p className="text-xs text-gray-500">
+                    Speaker controls the voice style. Actual language is determined by the Transcriber language setting.
+                  </p>
+                </div>
+
+                {/* Pace control */}
+                <div className="space-y-2">
+                  <Label>Speaking Pace ({formData.voiceSpeed}x)</Label>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="2.0"
+                    step="0.05"
+                    value={formData.voiceSpeed}
+                    onChange={(e) => handleChange('voiceSpeed', parseFloat(e.target.value))}
+                    className="w-full accent-emerald-500"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>Slow (0.5x)</span>
+                    <span>Normal (1.0x)</span>
+                    <span>Fast (2.0x)</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Voice Selection — ElevenLabs only */}
-            {formData.voiceProvider !== 'chatterbox' && (
+            {formData.voiceProvider !== 'chatterbox' && formData.voiceProvider !== 'sarvam' && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <Label>Voice Selection</Label>
@@ -854,7 +933,7 @@ const CreateAgentWizard: React.FC = () => {
             )}
 
             {/* Voice Speed Control — ElevenLabs non-V3 only */}
-            {formData.voiceProvider !== 'chatterbox' && !['eleven_v3', 'eleven_ttv_v3'].includes(formData.voiceModel) && (
+            {formData.voiceProvider !== 'chatterbox' && formData.voiceProvider !== 'sarvam' && !['eleven_v3', 'eleven_ttv_v3'].includes(formData.voiceModel) && (
               <div className="space-y-2">
                 <Label>Voice Speed ({formData.voiceSpeed}x)</Label>
                 <input

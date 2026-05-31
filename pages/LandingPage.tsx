@@ -51,7 +51,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ theme, toggleTheme }) => {
       {/* Navigation */}
       <nav className="flex items-center justify-between px-6 py-4 lg:px-12 fixed w-full top-0 z-50 bg-vani-light/80 dark:bg-vani-dark/80 backdrop-blur-md border-b border-gray-200 dark:border-white/5">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg vani-gradient flex items-center justify-center text-white font-bold">V</div>
+          <img src="/logo.png" alt="Vani Logo" className="h-8 object-contain" />
           <span className="text-xl font-bold tracking-tight dark:text-white">Vani</span>
         </div>
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600 dark:text-gray-300">
@@ -163,13 +163,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ theme, toggleTheme }) => {
         <div className="max-w-7xl mx-auto grid md:grid-cols-4 gap-16 mb-20">
           <div className="space-y-6 col-span-2 md:col-span-1">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-xl vani-gradient flex items-center justify-center text-white font-bold text-xl">V</div>
+              <img src="/logo.png" alt="Vani Logo" className="h-10 object-contain" />
               <span className="text-2xl font-bold tracking-tight dark:text-white">Vani</span>
             </div>
             <p className="text-base text-gray-500 dark:text-gray-400 font-medium">
               <span className="bg-vani-plum/10 dark:bg-vani-plum/20 px-2 py-1 rounded text-vani-plum dark:text-vani-pink font-bold">Building the future of voice interactions for Bharat.</span>
             </p>
-            <p className="text-xs text-gray-400 font-medium pt-4">© 2024 Vani Voice AI. All rights reserved.</p>
+            <p className="text-xs text-gray-400 font-medium pt-4">© 2024 Vani Dialer. All rights reserved.</p>
           </div>
 
           <div>

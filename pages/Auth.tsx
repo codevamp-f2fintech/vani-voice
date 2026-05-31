@@ -103,7 +103,7 @@ const Auth: React.FC<{ mode?: 'login' | 'signup' }> = () => {
       <div className="w-full max-w-md space-y-8 relative z-10 animate-in fade-in zoom-in duration-500">
         <div className="text-center space-y-4">
           <Link to="/" className="inline-flex items-center gap-2 mb-2">
-            <div className="w-12 h-12 rounded-2xl vani-gradient flex items-center justify-center text-white font-black text-2xl shadow-xl">V</div>
+            <img src="/logo.png" alt="Vani Logo" className="h-12 object-contain" />
             <span className="text-3xl font-black tracking-tighter dark:text-white">Vani</span>
           </Link>
           <h1 className="text-4xl font-black dark:text-white tracking-tight">

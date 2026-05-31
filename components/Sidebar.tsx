@@ -68,9 +68,7 @@ const Sidebar: React.FC<{ isOpen: boolean, setOpen: (o: boolean) => void }> = ({
       <aside className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-gray-200 bg-white transition-transform duration-300 dark:border-white/10 dark:bg-[#0A0A0B] lg:static lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex h-16 items-center justify-between px-6">
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg vani-gradient text-white font-black group-hover:scale-110 transition-transform">
-              V
-            </div>
+            <img src="/logo.png" alt="Vani Logo" className="h-8 object-contain" />
             <span className="text-xl font-bold tracking-tight dark:text-white">Vani</span>
           </Link>
           <button className="lg:hidden text-gray-500" onClick={() => setOpen(false)}>
