@@ -212,8 +212,8 @@ const CreateAgentWizard: React.FC = () => {
 
         // Voice
         voiceProvider: config.voice?.provider || '11labs',
-        voiceId: config.voice?.voiceId || '',
-        voiceModel: config.voice?.model || 'eleven_turbo_v2_5',
+        voiceId: (config.voice?.provider === 'sarvam' && config.voice?.voiceId?.length > 15) ? 'ritu' : (config.voice?.voiceId || ''),
+        voiceModel: (config.voice?.provider === 'sarvam' && config.voice?.model?.includes('eleven')) ? 'bulbul:v3' : (config.voice?.model || 'eleven_turbo_v2_5'),
         voiceSpeed: config.voice?.speed ?? 0.85,
         hinglish: config.voice?.hinglish ?? false,
 
@@ -650,7 +650,16 @@ const CreateAgentWizard: React.FC = () => {
                 <Label>Voice Provider</Label>
                 <select
                   value={formData.voiceProvider}
-                  onChange={(e) => handleChange('voiceProvider', e.target.value)}
+                  onChange={(e) => {
+                    const newProvider = e.target.value;
+                    if (newProvider === 'sarvam') {
+                      setFormData(prev => ({ ...prev, voiceProvider: newProvider, voiceId: 'ritu', voiceModel: 'bulbul:v3' }));
+                    } else if (newProvider === '11labs') {
+                      setFormData(prev => ({ ...prev, voiceProvider: newProvider, voiceModel: 'eleven_turbo_v2_5' }));
+                    } else {
+                      handleChange('voiceProvider', newProvider);
+                    }
+                  }}
                   className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm dark:text-white focus:ring-2 focus:ring-vani-plum/20 outline-none"
                 >
                   <option value="11labs">ElevenLabs</option>
@@ -662,7 +671,7 @@ const CreateAgentWizard: React.FC = () => {
                 </select>
               </div>
               {/* Voice Model — only relevant for ElevenLabs */}
-              {formData.voiceProvider !== 'chatterbox' && (
+              {formData.voiceProvider === '11labs' && (
                 <div className="space-y-2">
                   <Label>Voice Model</Label>
                   <select
@@ -687,7 +696,7 @@ const CreateAgentWizard: React.FC = () => {
             </div>
 
             {/* Hinglish Toggle — ElevenLabs only */}
-            {formData.voiceProvider !== 'chatterbox' && (
+            {formData.voiceProvider === '11labs' && (
               <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-200 dark:border-white/10">
                 <div>
                   <p className="text-sm font-medium dark:text-white">Hinglish Mode</p>
@@ -847,16 +856,16 @@ const CreateAgentWizard: React.FC = () => {
                     className="w-full px-4 py-3 bg-white dark:bg-white/10 border border-emerald-200 dark:border-emerald-700 rounded-xl text-sm dark:text-white focus:ring-2 focus:ring-emerald-400/30 outline-none"
                   >
                     <optgroup label="Hindi (hi-IN)">
-                      <option value="meera">Meera — Female, Natural</option>
-                      <option value="pavithra">Pavithra — Female, Warm</option>
-                      <option value="maitreyi">Maitreyi — Female, Clear</option>
-                      <option value="arvind">Arvind — Male, Professional</option>
-                      <option value="amol">Amol — Male, Calm</option>
-                      <option value="amartya">Amartya — Male, Expressive</option>
+                      <option value="ritu">Ritu — Female</option>
+                      <option value="priya">Priya — Female</option>
+                      <option value="neha">Neha — Female</option>
+                      <option value="aditya">Aditya — Male</option>
+                      <option value="rahul">Rahul — Male</option>
+                      <option value="amit">Amit — Male</option>
                     </optgroup>
                     <optgroup label="Indian English (en-IN)">
-                      <option value="meera">Meera — Female</option>
-                      <option value="arvind">Arvind — Male</option>
+                      <option value="ritu">Ritu — Female</option>
+                      <option value="aditya">Aditya — Male</option>
                     </optgroup>
                   </select>
                   <p className="text-xs text-gray-500">
